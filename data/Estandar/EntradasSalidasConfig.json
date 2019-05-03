@@ -1,0 +1,13 @@
+{
+  "Salidas": [	
+	  {"Dx":  "1", "nombre": "Pulsador", "inicio": "off" },
+	  {"Dx":  "2", "nombre": "Aux", "inicio": "on" }
+	],
+  "Entradas": [
+  	{"Dx":  "3", "nombre": "P. abierta", "tipo": "INPUT"},
+	  {"Dx":  "4", "nombre": "P. cerrada", "tipo": "INPUT" },
+	  {"Dx":  "5", "nombre": "seguridad", "tipo": "INPUT" },
+	  {"Dx":  "6", "nombre": "Seta emerg.", "tipo": "INPUT_PULLUP" }
+	]	
+}
+

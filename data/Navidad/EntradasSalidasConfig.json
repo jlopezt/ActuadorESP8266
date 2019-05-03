@@ -1,0 +1,9 @@
+{
+  "Salidas": [	
+	  {"Dx":  "1", "nombre": "luces", "inicio": "off" }
+	],
+  "Entradas": [
+  	{"Dx":  "3", "nombre": "Dummy", "tipo": "INPUT"}
+	]	
+}
+
