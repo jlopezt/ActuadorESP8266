@@ -227,7 +227,19 @@ void inicializaOrden(void)
   
   comandos[i].comando="estSec";
   comandos[i].descripcion="Estado del secuenciador";
-  comandos[i++].p_func_comando=func_comando_estSec;    
+  comandos[i++].p_func_comando=func_comando_estSec;
+  
+  comandos[i].comando="MQTTConfig";
+  comandos[i].descripcion="Configuración de MQTT";
+  comandos[i++].p_func_comando=func_comando_MQTTConfig;
+
+  comandos[i].comando="entradas";
+  comandos[i].descripcion="JSON entradas";
+  comandos[i++].p_func_comando=func_comando_Entradas;
+
+  comandos[i].comando="salidas";
+  comandos[i].descripcion="JSON salidas";
+  comandos[i++].p_func_comando=func_comando_Salidas;
   
   //resto
   for(;i<MAX_COMANDOS;)
@@ -302,10 +314,10 @@ void func_comando_restart(int iParametro, char* sParametro, float fParametro)//"
   ESP.restart();
   }
 
-void func_comando_reset(int iParametro, char* sParametro, float fParametro)//"reset")
+/*void func_comando_reset(int iParametro, char* sParametro, float fParametro)//"reset")
   {
   ESP.reset();
-  }
+  }*/
   
 void func_comando_info(int iParametro, char* sParametro, float fParametro)//"info")
   {
@@ -476,4 +488,19 @@ void func_comando_estSec(int iParametro, char* sParametro, float fParametro)//"d
 
   Serial.printf("Hay %i planes definidos\n",getNumPlanes());
   }   
+
+void func_comando_MQTTConfig(int iParametro, char* sParametro, float fParametro)//"debug")
+  {
+  Serial.printf("Configuracion leida:\nID MQTT: %s\nIP broker: %s\nIP Puerto del broker: %i\nUsuario: %s\nPassword: %s\nTopic root: %s\nEnviar KeepAlive: %i\nPublicar entradas: %i\nPublicar salidas: %i\nWill topic: %s\nWill msg: %s\nCelan session: %i\n",ID_MQTT.c_str(),IPBroker.toString().c_str(),puertoBroker,usuarioMQTT.c_str(),passwordMQTT.c_str(),topicRoot.c_str(),enviarKeepAlive,publicarEntradas,publicarSalidas,(topicRoot+"/"+String(WILL_TOPIC)).c_str(),String(WILL_MSG).c_str(), CLEAN_SESSION);
+  }  
+
+void func_comando_Salidas(int iParametro, char* sParametro, float fParametro)//"debug")
+  {
+  Serial.printf("%s\n",generaJsonEstadoSalidas().c_str());
+  }  
+
+void func_comando_Entradas(int iParametro, char* sParametro, float fParametro)//"debug")
+  {
+  Serial.printf("%s\n",generaJsonEstadoEntradas().c_str());
+  }    
 /***************************** FIN funciones para comandos ******************************************/ 
