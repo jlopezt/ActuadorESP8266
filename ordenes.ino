@@ -165,6 +165,10 @@ void inicializaOrden(void)
   comandos[i].descripcion="Devuelve informacion del hardware";
   comandos[i++].p_func_comando=func_comando_info;
   
+  comandos[i].comando="flist";
+  comandos[i].descripcion="Lista los ficheros en el sistema de ficheros";
+  comandos[i++].p_func_comando=func_comando_flist;
+
   comandos[i].comando="fexist";
   comandos[i].descripcion="Indica si existe un fichero en el sistema de ficheros";
   comandos[i++].p_func_comando=func_comando_fexist;
@@ -200,7 +204,7 @@ void inicializaOrden(void)
   comandos[i].comando="reloj";
   comandos[i].descripcion="Consulta el reloj del sistema";
   comandos[i++].p_func_comando=func_comando_reloj;
-  
+
   comandos[i].comando="echo";
   comandos[i].descripcion="Devuelve el eco del sistema";
   comandos[i++].p_func_comando=func_comando_echo;
@@ -209,14 +213,10 @@ void inicializaOrden(void)
   comandos[i].descripcion="Activa/desactiva el modo debug";
   comandos[i++].p_func_comando=func_comando_debug;
 
-  comandos[i].comando="enviarKeepAlive";
-  comandos[i].descripcion="Activa/desactiva el envio de Kepp Alive MQTT";
-  comandos[i++].p_func_comando=func_comando_enviarKeepAlive;
-  
   comandos[i].comando="ES";
   comandos[i].descripcion="Entradas y Salidas";
   comandos[i++].p_func_comando=func_comando_ES;
-
+  
   comandos[i].comando="actSec";
   comandos[i].descripcion="Activa secuenciador";
   comandos[i++].p_func_comando=func_comando_actSec;
@@ -227,8 +227,8 @@ void inicializaOrden(void)
   
   comandos[i].comando="estSec";
   comandos[i].descripcion="Estado del secuenciador";
-  comandos[i++].p_func_comando=func_comando_estSec;
-  
+  comandos[i++].p_func_comando=func_comando_estSec;    
+
   comandos[i].comando="MQTTConfig";
   comandos[i].descripcion="Configuración de MQTT";
   comandos[i++].p_func_comando=func_comando_MQTTConfig;
@@ -240,7 +240,7 @@ void inicializaOrden(void)
   comandos[i].comando="salidas";
   comandos[i].descripcion="JSON salidas";
   comandos[i++].p_func_comando=func_comando_Salidas;
-  
+
   //resto
   for(;i<MAX_COMANDOS;)
     {
@@ -250,7 +250,6 @@ void inicializaOrden(void)
     }
     
   func_comando_help(0,"",0.0);
-  //for(int8_t i=0;i<MAX_COMANDOS;i++) if (comandos[i].comando!=String("vacio")) Serial.printf("Comando %i: [%s]\n",i, comandos[i].comando.c_str());  
   }
 
 /*********************************************************************/
@@ -281,9 +280,9 @@ void func_comando_nivelActivo(int iParametro, char* sParametro, float fParametro
 
     String cad="";
     
-    if(!leeFichero(GLOBAL_CONFIG_FILE, cad)) Serial.println("No se pudo leer el fichero");
+    if(!leeFicheroConfig(GLOBAL_CONFIG_FILE, cad)) Serial.println("No se pudo leer el fichero");
     cad=generaJsonConfiguracionNivelActivo(cad, nivelActivo);
-    if(!salvaFichero(GLOBAL_CONFIG_FILE, GLOBAL_CONFIG_BAK_FILE, cad)) Serial.println("No se pudo salvar el fichero");      
+    if(!salvaFicheroConfig(GLOBAL_CONFIG_FILE, GLOBAL_CONFIG_BAK_FILE, cad)) Serial.println("No se pudo salvar el fichero");      
     }
   Serial.printf("\nNivel activo: %i\n",nivelActivo);  
   }  
@@ -313,11 +312,6 @@ void func_comando_restart(int iParametro, char* sParametro, float fParametro)//"
   {
   ESP.restart();
   }
-
-/*void func_comando_reset(int iParametro, char* sParametro, float fParametro)//"reset")
-  {
-  ESP.reset();
-  }*/
   
 void func_comando_info(int iParametro, char* sParametro, float fParametro)//"info")
   {
@@ -350,9 +344,20 @@ void func_comando_info(int iParametro, char* sParametro, float fParametro)//"inf
   Serial.printf("FlashChipSize: %i\n",ESP.getFlashChipSize());
   Serial.printf("FlashChipSpeed: %i\n",ESP.getFlashChipSpeed());
       //FlashMode_t ESP.getFlashChipMode());
-  Serial.printf("FlashChipSizeByChipId: %i\n",ESP.getFlashChipSizeByChipId());  
+  Serial.printf("FlashChipSizeByChipId: %i\n",ESP.getFlashChipSizeByChipId()); 
   Serial.printf("-----------------------------------------------\n");
   }  
+
+void func_comando_flist(int iParametro, char* sParametro, float fParametro)//"fexist")
+  {
+  String contenido="";  
+  if(listaFicheros(contenido)) 
+    {
+    contenido.replace("|","\n");
+    Serial.printf("Contendio del sistema de ficheros:\n%s\n",contenido.c_str());
+    }
+  else Serial.printf("Ha habido un problema.....\n");
+  }
 
 void func_comando_fexist(int iParametro, char* sParametro, float fParametro)//"fexist")
   {
@@ -417,7 +422,7 @@ void func_comando_fremove(int iParametro, char* sParametro, float fParametro)//"
 
 void func_comando_format(int iParametro, char* sParametro, float fParametro)//"format")
   {     
-  if (SPIFFS.format()) Serial.println("Sistema de ficheros formateado");
+  if (formatearFS()) Serial.println("Sistema de ficheros formateado");
   else Serial.println("Error al formatear el sistema de ficheros");
   } 
 
@@ -442,7 +447,7 @@ void func_comando_reloj(int iParametro, char* sParametro, float fParametro)//"re
   if(cambioHorario()==1) Serial.println("Horario de verano");
   else Serial.println("Horario de invierno");
   } 
-
+  
 void func_comando_echo(int iParametro, char* sParametro, float fParametro)//"echo") 
   {
   Serial.printf("echo; %s\n",sParametro);
@@ -455,21 +460,13 @@ void func_comando_debug(int iParametro, char* sParametro, float fParametro)//"de
   else Serial.println("debugGlobal esta off");
   }
 
-void func_comando_enviarKeepAlive(int iParametro, char* sParametro, float fParametro)//"debug")
-  {
-  if(iParametro!=0) enviarKeepAlive=1;
-  else  enviarKeepAlive=0;
-
-  Serial.printf("enviarKeepAlive=%i\n",enviarKeepAlive);
-  }
-
 void func_comando_ES(int iParametro, char* sParametro, float fParametro)//"debug")
   {
   Serial.println("Entradas");  
   for(int8_t i=0;i<MAX_ENTRADAS;i++) Serial.printf("%i: nombre: %s | configurada: %i | estado: %i | tipo: %s | pin: %i\n",i,entradas[i].nombre.c_str(),entradas[i].configurada,entradas[i].estado,entradas[i].tipo.c_str(),entradas[i].pin);
   Serial.println("Salidas");  
   for(int8_t i=0;i<MAX_RELES;i++) Serial.printf("%i: nombre: %s | configurado: %i | estado: %i | inicio: %i | pin: %i\n",i,reles[i].nombre.c_str(),reles[i].configurado,reles[i].estado,reles[i].inicio,reles[i].pin);  
-  }
+  } 
 
 void func_comando_actSec(int iParametro, char* sParametro, float fParametro)//"debug")
   {
@@ -491,7 +488,7 @@ void func_comando_estSec(int iParametro, char* sParametro, float fParametro)//"d
 
 void func_comando_MQTTConfig(int iParametro, char* sParametro, float fParametro)//"debug")
   {
-  Serial.printf("Configuracion leida:\nID MQTT: %s\nIP broker: %s\nIP Puerto del broker: %i\nUsuario: %s\nPassword: %s\nTopic root: %s\nEnviar KeepAlive: %i\nPublicar entradas: %i\nPublicar salidas: %i\nWill topic: %s\nWill msg: %s\nCelan session: %i\n",ID_MQTT.c_str(),IPBroker.toString().c_str(),puertoBroker,usuarioMQTT.c_str(),passwordMQTT.c_str(),topicRoot.c_str(),enviarKeepAlive,publicarEntradas,publicarSalidas,(topicRoot+"/"+String(WILL_TOPIC)).c_str(),String(WILL_MSG).c_str(), CLEAN_SESSION);
+  Serial.printf("Configuracion leida:\nID MQTT: %s\nIP broker: %s\nIP Puerto del broker: %i\nUsuario: %s\nPassword: %s\nTopic root: %s\nPublicar entradas: %i\nPublicar salidas: %i\nWill topic: %s\nWill msg: %s\nCelan session: %i\n",ID_MQTT.c_str(),IPBroker.toString().c_str(),puertoBroker,usuarioMQTT.c_str(),passwordMQTT.c_str(),topicRoot.c_str(),publicarEntradas,publicarSalidas,(topicRoot+"/"+String(WILL_TOPIC)).c_str(),String(WILL_MSG).c_str(), CLEAN_SESSION);
   }  
 
 void func_comando_Salidas(int iParametro, char* sParametro, float fParametro)//"debug")

@@ -1,0 +1,7 @@
+{
+  "Entradas": [
+  	{"Dx":  "3", "nombre": "Dummy", "tipo": "INPUT"},
+  	{"Dx":  "4", "nombre": "Dummy2", "tipo": "INPUT"}
+	]	
+}
+

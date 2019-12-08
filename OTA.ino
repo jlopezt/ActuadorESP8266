@@ -21,20 +21,7 @@ Funcines que provee al libreria:
   void handle();  //Call this in loop() to run the service
   int getCommand();  //Gets update command type after OTA has started. Either U_FLASH or U_SPIFFS
 **********************************************************************/
-boolean iniializaOTA(boolean debug)
-  {    
-  //OTA
-  ArduinoOTA.setPassword((const char *)"88716");// No authentication by default
-
-  //Configuramos las funciones CallBack
-  ArduinoOTA.onStart(inicioOTA);
-  ArduinoOTA.onEnd(finOTA);
-  ArduinoOTA.onProgress(progresoOTA);
-  ArduinoOTA.onError(errorOTA);
-  
-  //iniciamos la gestion OTA
-  ArduinoOTA.begin();
-  }
+#include <ArduinoOTA.h>
 
 void inicioOTA(void)
   {
@@ -62,7 +49,7 @@ void progresoOTA(unsigned int progress, unsigned int total)
   Serial.printf("actualizacion OTA en progreso: %5.1f %%\r",avance);
   }
 
-void errorOTA(ota_error_t error)
+void erroresOTA(ota_error_t error)
   {
   Serial.printf("Error en actualizacion OTA ");    Serial.printf("Error[%u]: ", error);
   
@@ -73,3 +60,24 @@ void errorOTA(ota_error_t error)
   else if (error == OTA_END_ERROR) Serial.println("End Failed");
   }
 
+ boolean inicializaOTA(boolean debug)
+  {    
+  //OTA
+  //Sets the device hostname. Default esp32-xxxxxx
+  //ArduinoOTAClass&/void setHostname(const char *hostname);
+  //Sets if the device should be rebooted after successful update. Default true
+  //ArduinoOTAClass&/void setRebootOnSuccess(bool reboot);
+
+  ArduinoOTA.setHostname((const char *)NOMBRE_FAMILIA);        
+  ArduinoOTA.setRebootOnSuccess(true);
+  ArduinoOTA.setPassword((const char *)"88716");// No authentication by default
+
+  //Configuramos las funciones CallBack
+  ArduinoOTA.onStart(inicioOTA);
+  ArduinoOTA.onEnd(finOTA);
+  ArduinoOTA.onProgress(progresoOTA);
+  ArduinoOTA.onError(erroresOTA);
+  
+  //iniciamos la gestion OTA
+  ArduinoOTA.begin();
+  } 

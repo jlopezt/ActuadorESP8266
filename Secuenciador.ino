@@ -42,7 +42,7 @@ void inicializaSecuenciador()
     } 
         
   //leo la configuracion del fichero
-  if(recuperaDatosSecuenciador(debugGlobal)==KO) Serial.println("Configuracion del secuenciador por defecto");
+  if(!recuperaDatosSecuenciador(debugGlobal)) Serial.println("Configuracion del secuenciador por defecto");
   else
     { 
     //compruebo si la salida asociada a cada plan esta configurada
@@ -58,32 +58,27 @@ void inicializaSecuenciador()
         //Esta bien configurado  
         else asociarSecuenciador(planes[i].rele, i); //Asocio el rele al plan
         }
-      else Serial.printf("Plan %i no configurado\n",i);
+      else Serial.printf("Plan %i no configurado\n",i);        
       }
     }
   }
 
-int recuperaDatosSecuenciador(boolean debug)
+boolean recuperaDatosSecuenciador(boolean debug)
   {
   String cad="";
 
   if (debug) Serial.println("Recupero configuracion de archivo...");
   
-  if(leeFichero(SECUENCIADOR_CONFIG_FILE, cad)) 
-    {
-    if(parseaConfiguracionSecuenciador(cad)) return OK;
-    }
-  else
+  if(!leeFicheroConfig(SECUENCIADOR_CONFIG_FILE, cad)) 
     {
     //Confgiguracion por defecto
     Serial.printf("No existe fichero de configuracion del secuenciador\n");
-    cad="{ \"estadoInicial\": 1, \"Planes\":[ {\"id_plan\": 1, \"salida\": 1, \"intervalos\": [{\"id\":  0, \"valor\": 0},{\"id\":  1, \"valor\": 1}, {\"id\":  2, \"valor\": 0}, {\"id\":  3, \"valor\": 1}, {\"id\":  4, \"valor\": 0}, {\"id\":  5, \"valor\": 1}, {\"id\":  6, \"valor\": 0}, {\"id\":  7, \"valor\": 1}, {\"id\":  8, \"valor\": 0}, {\"id\":  9, \"valor\": 1}, {\"id\": 10, \"valor\": 0}, {\"id\": 11, \"valor\": 1},{\"id\":  12, \"valor\": 0},{\"id\":  13, \"valor\": 1}, {\"id\":  14, \"valor\": 0}, {\"id\":  15, \"valor\": 1}, {\"id\":  16, \"valor\": 0}, {\"id\":  17, \"valor\": 1}, {\"id\":  18, \"valor\": 0}, {\"id\":  19, \"valor\": 1}, {\"id\":  20, \"valor\": 0}, {\"id\":  21, \"valor\": 1}, {\"id\": 22, \"valor\": 0}, {\"id\": 23, \"valor\": 1} ] } ] }";
-    salvaFichero(SECUENCIADOR_CONFIG_FILE, SECUENCIADOR_CONFIG_BAK_FILE, cad);
-    Serial.printf("Fichero de configuracion del secuenciador creado por defecto\n");
-    if(parseaConfiguracionSecuenciador(cad)) return OK;
+    //cad="{ \"estadoInicial\": 0, \"Planes\":[ {\"id_plan\": 1, \"salida\": 1, \"intervalos\": [{\"id\":  0, \"valor\": 0},{\"id\":  1, \"valor\": 1}, {\"id\":  2, \"valor\": 0}, {\"id\":  3, \"valor\": 1}, {\"id\":  4, \"valor\": 0}, {\"id\":  5, \"valor\": 1}, {\"id\":  6, \"valor\": 0}, {\"id\":  7, \"valor\": 1}, {\"id\":  8, \"valor\": 0}, {\"id\":  9, \"valor\": 1}, {\"id\": 10, \"valor\": 0}, {\"id\": 11, \"valor\": 1},{\"id\":  12, \"valor\": 0},{\"id\":  13, \"valor\": 1}, {\"id\":  14, \"valor\": 0}, {\"id\":  15, \"valor\": 1}, {\"id\":  16, \"valor\": 0}, {\"id\":  17, \"valor\": 1}, {\"id\":  18, \"valor\": 0}, {\"id\":  19, \"valor\": 1}, {\"id\":  20, \"valor\": 0}, {\"id\":  21, \"valor\": 1}, {\"id\": 22, \"valor\": 0}, {\"id\": 23, \"valor\": 1} ] } ] }";
+    cad="{\"estadoInicial\": 0,\"Planes\":[]}";
+    //if(salvaFicheroConfig(SECUENCIADOR_CONFIG_FILE, SECUENCIADOR_CONFIG_BAK_FILE, cad)) Serial.printf("Fichero de configuracion del secuenciador creado por defecto\n");
     }      
     
-  return KO;
+  return parseaConfiguracionSecuenciador(cad);
   }
 
 /*********************************************/
@@ -222,7 +217,7 @@ String pintaPlanHTML(int8_t plan)
 
   //validaciones previas
   if(plan<0 || plan>MAX_PLANES) return cad;
-  
+
   cad += "<TABLE style=\"border: 2px solid black\">\n";
   cad += "<CAPTION>Plan " + String(plan) + "</CAPTION>\n";  
 
@@ -237,7 +232,7 @@ String pintaPlanHTML(int8_t plan)
   
   for(int8_t intervalo=0;intervalo<12;intervalo++)
     {
-    Serial.printf("intervalo: %i | cad: %i\n",intervalo,cad.length());  
+    Serial.printf("intervalo: %i | cad: %i\n",intervalo,cad.length());      
     cad += "<tr>";
     cad += "<td>" + String(intervalo) + ": (" + String(intervalo*5) + "-" + String(intervalo*5+4) + ")</td>";    
     for(int8_t i=0;i<HORAS_EN_DIA;i++) cad += "<td style=\"text-align:center;\">" + (planes[plan].horas[i] & mascara?String(1):String(0)) + "</td>";
@@ -245,6 +240,6 @@ String pintaPlanHTML(int8_t plan)
     
     mascara<<=1;
     }  
-
+    
   return cad;  
   }
