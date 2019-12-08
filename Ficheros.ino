@@ -4,7 +4,6 @@
 /* memoria del modulo esp6288                   */
 /*                                              */
 /************************************************/
-#include <FS.h>     //this needs to be first, or it all crashes and burns...
 
 /************************************************/
 /* Inicializa el sistema de ficheros del modulo */

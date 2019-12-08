@@ -125,19 +125,7 @@ int8_t diaSemana(void)
   if (timeinfo.tm_wday==0) return 7;
   return timeinfo.tm_wday;  
   }
-
-/***********************************/
-/*        Solo para ordenes        */
-/***********************************/
-/*String getHora(void)
-  {
-  char cad[6]="00:00";
-  getLocalTime(&timeinfo);  
-  sprintf(cad,"%2.0i:%2.0i",timeinfo.tm_hour,timeinfo.tm_min);    
-  return String(cad);  
-  }
-*/
-  
+ 
 /***********************************/
 /*        Solo para ordenes        */
 /***********************************/

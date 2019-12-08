@@ -10,23 +10,24 @@ Informacion del Hw del sistema http://IPActuador/info
 
 //Configuracion de los servicios web
 #define PUERTO_WEBSERVER 80
-#define IDENTIFICACION  "<h1>Modulo Actuador (entradas/salidas)</h1>"
 
 //Includes
 #include <ESP8266WebServer.h>
-#include <ESP8266mDNS.h>
 
 //Variables globales
 ESP8266WebServer server(PUERTO_WEBSERVER);
 
 //Cadenas HTML precargadas
-String cabeceraHTML="<HTML><HEAD><TITLE>" + nombre_dispositivo + " </TITLE></HEAD><BODY><h1><a href=\"../\" target=\"_self\">" + nombre_dispositivo + "</a><br></h1>";
+String cabeceraHTML="";
 String enlaces="<TABLE>\n<CAPTION>Enlaces</CAPTION>\n<TR><TD><a href=\"info\" target=\"_self\">Info</a></TD></TR>\n<TR><TD><a href=\"test\" target=\"_self\">Test</a></TD></TR>\n<TR><TD><a href=\"restart\" target=\"_self\">Restart</a></TD></TR>\n<TR><TD><a href=\"listaFicheros\" target=\"_self\">Lista ficheros</a></TD></TR>\n<TR><TD><a href=\"estado\" target=\"_self\">Estado</a></TD></TR>\n<TR><TD><a href=\"estadoSalidas\" target=\"_self\">Estado salidas</a></TD></TR>\n<TR><TD><a href=\"estadoEntradas\" target=\"_self\">Estado entradas</a></TD></TR>\n<TR><TD><a href=\"planes\" target=\"_self\">Planes del secuenciador</a></TD></TR></TABLE>\n"; 
 String pieHTML="</BODY></HTML>";
 
 /*********************************** Inicializacion y configuracion *****************************************************************/
 void inicializaWebServer(void)
   {
+  //lo inicializo aqui, despues de leer el nombre del dispositivo en la configuracion del cacharro
+  cabeceraHTML="<HTML><HEAD><TITLE>" + nombre_dispositivo + " </TITLE></HEAD><BODY><h1><a href=\"../\" target=\"_self\">" + nombre_dispositivo + "</a><br></h1>";
+  
   //decalra las URIs a las que va a responder
   server.on("/", handleRoot); //Responde con la iodentificacion del modulo
   server.on("/estado", handleEstado); //Servicio de estdo de reles
@@ -44,11 +45,11 @@ void inicializaWebServer(void)
   server.on("/restart", handleRestart);  //URI de test
   server.on("/info", handleInfo);  //URI de test
   
-  server.on("/listaFicheros", HTTP_ANY, handleListaFicheros);  //URI de leer fichero
+  server.on("/listaFicheros", handleListaFicheros);  //URI de leer fichero
   server.on("/creaFichero", handleCreaFichero);  //URI de crear fichero
   server.on("/borraFichero", handleBorraFichero);  //URI de borrar fichero
   server.on("/leeFichero", handleLeeFichero);  //URI de leer fichero
-  server.on("/manageFichero", HTTP_ANY, handleManageFichero);  //URI de leer fichero  
+  server.on("/manageFichero", handleManageFichero);  //URI de leer fichero  
   server.on("/infoFS", handleInfoFS);  //URI de info del FS
 
   server.on("/edit.html",  HTTP_POST, []() {  // If a POST request is sent to the /edit.html address,
@@ -84,11 +85,8 @@ void handleRoot()
   String cad="";
   String orden="";
 
-  cad += cabeceraHTML;
   //genero la respuesta por defecto
-  cad += IDENTIFICACION;
-  cad += "<BR>\n";
-
+  cad += cabeceraHTML;
   //Entradas  
   cad += "<TABLE style=\"border: 2px solid black\">\n";
   cad += "<CAPTION>Entradas</CAPTION>\n";  
@@ -266,7 +264,6 @@ void handlePlanes(void)
   int8_t numPlanes=getNumPlanes();  
   String cad=cabeceraHTML;
   
-  cad += IDENTIFICACION;
   cad += "<h1>hay " + String(numPlanes) + " plan(es) activo(s).</h1><BR>";
   
   for(int8_t i=0;i<numPlanes;i++)
@@ -338,7 +335,6 @@ void handleTest(void)
   String cad="";
 
   cad += cabeceraHTML;
-  cad += IDENTIFICACION;
   
   cad += "Test OK<br>";
   cad += pieHTML;
@@ -357,7 +353,6 @@ void handleReset(void)
   String cad="";
 
   cad += cabeceraHTML;
-  cad += IDENTIFICACION;
   
   cad += "Reseteando...<br>";
   cad += pieHTML;
@@ -378,7 +373,6 @@ void handleRestart(void)
   String cad="";
 
   cad += cabeceraHTML;
-  cad += IDENTIFICACION;
   
   cad += "Reiniciando...<br>";
   cad += pieHTML;
@@ -397,7 +391,6 @@ void handleRestart(void)
 void handleInfo(void)
   {
   String cad=cabeceraHTML;
-  cad += IDENTIFICACION; //"Modulo " + String(direccion) + " Habitacion= " + nombres[direccion];
 
   cad+= "<BR>-----------------info logica-----------------<BR>";
   cad += "IP: " + String(getIP(debugGlobal));
@@ -515,7 +508,6 @@ void handleCreaFichero(void)
   boolean salvado=false;
 
   cad += cabeceraHTML;
-  cad += IDENTIFICACION;
 
   if(server.hasArg("nombre") && server.hasArg("contenido")) //si existen esos argumentos
     {
@@ -544,7 +536,6 @@ void handleBorraFichero(void)
   String cad="";
 
   cad += cabeceraHTML;
-  cad += IDENTIFICACION;
   
   if(server.hasArg("nombre") ) //si existen esos argumentos
     {
@@ -570,9 +561,7 @@ void handleLeeFichero(void)
   String cad=cabeceraHTML;
   String nombreFichero="";
   String contenido="";
-  
-  cad += IDENTIFICACION;
-  
+   
   if(server.hasArg("nombre") ) //si existen esos argumentos
     {
     nombreFichero=server.arg("nombre");
@@ -607,7 +596,6 @@ void handleInfoFS(void)
   String cad="";
 
   cad += cabeceraHTML;
-  cad += IDENTIFICACION;//"<h1>" + String(NOMBRE_FAMILIA) + "<br></h1>";
   
   //inicializo el sistema de ficheros
   if (SPIFFS.begin()) 
@@ -750,7 +738,6 @@ void handleListaFicheros(void)
   String cad="";
 
   cad += cabeceraHTML;
-  cad += IDENTIFICACION;
   
   //Variables para manejar la lista de ficheros
   String contenido="";

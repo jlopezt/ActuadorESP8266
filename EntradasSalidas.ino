@@ -53,7 +53,6 @@ int8_t pinGPIOS[9]={16,5,4,0,2,14,12,13,15}; //tiene 9 puertos digitales, el ind
 /*********************************************/
 void inicializaEntradas(void)
   {  
-    Serial.printf("Empezamos...\n");
   //Entradas
   for(int8_t i=0;i<MAX_ENTRADAS;i++)
     {
@@ -65,21 +64,20 @@ void inicializaEntradas(void)
     entradas[i].pin=-1;
     }
 
-         Serial.printf("2\n");
   //leo la configuracion del fichero
-  if(recuperaDatosEntradas(debugGlobal)==KO) Serial.println("Configuracion de los reles por defecto");
+  if(!recuperaDatosEntradas(false)) Serial.println("Configuracion de los reles por defecto");
   else
-    {  
+    { 
     //Entradas
     for(int8_t i=0;i<MAX_ENTRADAS;i++)
       {
-      if(entradas[i].tipo!="INPUT_PULLUP") pinMode(pinGPIOS[entradas[i].pin], INPUT_PULLUP);
-      //else if(entradas[i].tipo!="INPUT_PULLDOWN") pinMode(pinGPIOS[entradas[i].pin], INPUT_PULLDOWN);
-      else pinMode(pinGPIOS[entradas[i].pin], INPUT);
+      if(entradas[i].configurada==CONFIGURADO)
+        {  
+        Serial.printf("Nombre entrada[%i]=%s | pin entrada: %i | GPIO: %i | tipo: %s\n",i,entradas[i].nombre.c_str(),entradas[i].pin,pinGPIOS[entradas[i].pin],entradas[i].tipo.c_str());
+        if(entradas[i].tipo=="INPUT_PULLUP") pinMode(pinGPIOS[entradas[i].pin], INPUT_PULLUP);
+        else pinMode(pinGPIOS[entradas[i].pin], INPUT);
+        }
       }
-
-    //Entradas configuradas
-    for(int i;i<MAX_ENTRADAS;i++) if(entradas[i].configurada==CONFIGURADO) Serial.printf("Nombre entrada[%i]=%s | pin entrada: %i\n",i,entradas[i].nombre.c_str(),entradas[i].pin);
     }  
   }
 
@@ -103,21 +101,25 @@ void inicializaSalidas(void)
     }
          
   //leo la configuracion del fichero
-  if(recuperaDatosSalidas(debugGlobal)==KO) Serial.println("Configuracion de los reles por defecto");
+  if(!recuperaDatosSalidas(debugGlobal)) Serial.println("Configuracion de los reles por defecto");
   else
     {  
     //Salidas
     for(int8_t i=0;i<MAX_RELES;i++)
-      {      
-      pinMode(pinGPIOS[reles[i].pin], OUTPUT); //es salida
-      
-      reles[i].estado=reles[i].inicio;  
-      if(reles[i].inicio==1) digitalWrite(pinGPIOS[reles[i].pin], nivelActivo);  //lo inicializo a apagado
-      else digitalWrite(pinGPIOS[reles[i].pin], !nivelActivo);  //lo inicializo a apagado 
-      }
+      {    
+      if(reles[i].configurado==CONFIGURADO) 
+        {   
+        pinMode(pinGPIOS[reles[i].pin], OUTPUT); //es salida
 
-    //Salidas configuradas
-    for(int i;i<MAX_RELES;i++) if(reles[i].configurado==CONFIGURADO) Serial.printf("Nombre rele[%i]=%s | pin rele: %i | inicio: %i\n",i,reles[i].nombre.c_str(),reles[i].pin,reles[i].inicio);
+        //parte logica
+        reles[i].estado=reles[i].inicio;  
+        //parte fisica
+        if(reles[i].inicio==1) digitalWrite(pinGPIOS[reles[i].pin], nivelActivo);  //lo inicializo a apagado
+        else digitalWrite(pinGPIOS[reles[i].pin], !nivelActivo);  //lo inicializo a apagado 
+        
+        Serial.printf("Nombre rele[%i]=%s | pin rele: %i | inicio: %i\n",i,reles[i].nombre.c_str(),reles[i].pin,reles[i].inicio);
+        }      
+      }
     }  
   }
 
@@ -125,12 +127,11 @@ void inicializaSalidas(void)
 /* Lee el fichero de configuracion de las    */
 /* entradas o genera conf por defecto        */
 /*********************************************/
-int recuperaDatosEntradas(boolean debug)
+boolean recuperaDatosEntradas(boolean debug)
   {
   String cad="";
-Serial.printf("3\n");
   if (debug) Serial.println("Recupero configuracion de archivo...");
-  
+
   if(!leeFicheroConfig(ENTRADAS_CONFIG_FILE, cad)) 
     {
     //Confgiguracion por defecto
@@ -139,7 +140,6 @@ Serial.printf("3\n");
     //salvo la config por defecto
     //if(salvaFicheroConfig(ENTRADAS_CONFIG_FILE, ENTRADAS_CONFIG_BAK_FILE, cad)) Serial.printf("Fichero de configuracion de Entradas creado por defecto\n");
     }      
-    Serial.printf("4\n");
   return parseaConfiguracionEntradas(cad);
   }
 
@@ -147,7 +147,7 @@ Serial.printf("3\n");
 /* Lee el fichero de configuracion de las    */
 /* salidas o genera conf por defecto         */
 /*********************************************/
-int recuperaDatosSalidas(boolean debug)
+boolean recuperaDatosSalidas(boolean debug)
   {
   String cad="";
 
@@ -170,33 +170,30 @@ int recuperaDatosSalidas(boolean debug)
 /* configuracio de las entradas              */
 /*********************************************/
 boolean parseaConfiguracionEntradas(String contenido)
-  { return false;
+  {
   DynamicJsonBuffer jsonBuffer;
   JsonObject& json = jsonBuffer.parseObject(contenido.c_str());
-          Serial.printf("5\n");
+
   json.printTo(Serial);
   if (!json.success()) return false;
-        Serial.printf("6\n");
-  Serial.println("parsed json");
+
+  Serial.println("\nparsed json");
 //******************************Parte especifica del json a leer********************************
   JsonArray& Entradas = json["Entradas"];
 
   int8_t max;
   max=(Entradas.size()<MAX_ENTRADAS?Entradas.size():MAX_ENTRADAS);
-    Serial.printf("7 max= %i\n",max);
   for(int8_t i=0;i<max;i++)
     { 
     entradas[i].configurada=CONFIGURADO; //Cambio el valor para configurarla  
     entradas[i].nombre=String((const char *)Entradas[i]["nombre"]);
     entradas[i].tipo=String((const char *)Entradas[i]["tipo"]);
     entradas[i].pin=atoi(Entradas[i]["Dx"]);
-    Serial.printf("%02i: %s| pin: %i| configurado= %i| tipo=%s\n",i,entradas[i].nombre.c_str(),entradas[i].pin,entradas[i].configurada,entradas[i].tipo.c_str());
     }
 
   Serial.printf("Entradas:\n"); 
   for(int8_t i=0;i<MAX_ENTRADAS;i++) Serial.printf("%02i: %s| pin: %i| configurado= %i| tipo=%s\n",i,entradas[i].nombre.c_str(),entradas[i].pin,entradas[i].configurada,entradas[i].tipo.c_str());
 //************************************************************************************************
-Serial.printf("9\n");
   return true; 
   }
 
@@ -212,7 +209,7 @@ boolean parseaConfiguracionSalidas(String contenido)
   json.printTo(Serial);
   if (!json.success()) return false;
         
-  Serial.println("parsed json");
+  Serial.println("\nparsed json");
 //******************************Parte especifica del json a leer********************************
   JsonArray& Salidas = json["Salidas"];
 

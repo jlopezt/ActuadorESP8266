@@ -26,14 +26,6 @@ Funcines que provee al libreria:
 void inicioOTA(void)
   {
   Serial.println("Actualizacion OTA");
-/*  String tipo;
-  if (ArduinoOTA.getCommand() == U_FLASH)
-    tipo = "sketch";
-  else // U_SPIFFS
-    tipo = "filesystem";
-
-  // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-  Serial.println("Actualizando " + tipo);  */
   }
   
 void finOTA(void)

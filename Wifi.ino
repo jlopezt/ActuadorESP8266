@@ -71,11 +71,11 @@ boolean recuperaDatosWiFi(boolean debug)
   if (debug) Serial.println("Recupero configuracion de archivo...");
 
   //cargo el valores por defecto
-  wifiIP=(0,0,0,0);
-  wifiGW=(0,0,0,0);
-  wifiNet=(0,0,0,0);
-  wifiDNS1=(0,0,0,0);
-  wifiDNS2=(0,0,0,0);
+  wifiIP=IPAddress(0,0,0,0);
+  wifiGW=IPAddress(0,0,0,0);
+  wifiNet=IPAddress(0,0,0,0);
+  wifiDNS1=IPAddress(0,0,0,0);
+  wifiDNS2=IPAddress(0,0,0,0);
    
   if(!leeFicheroConfig(WIFI_CONFIG_FILE, cad)) 
     {
@@ -99,7 +99,7 @@ boolean parseaConfiguracionWifi(String contenido)
   JsonObject& json = jsonBuffer.parseObject(contenido.c_str());
   if (json.success()) 
     {
-    Serial.println("parsed json");
+    Serial.println("\nparsed json");
 //******************************Parte especifica del json a leer********************************
     if (json.containsKey("wifiIP")) wifiIP.fromString((const char *)json["wifiIP"]); 
     if (json.containsKey("wifiGW")) wifiGW.fromString((const char *)json["wifiGW"]);
@@ -274,7 +274,7 @@ String generaJsonConfiguracionWifi(String configActual, String ssid, String pass
   json.printTo(Serial);
   if (json.success()) 
     {
-    Serial.println("parsed json");          
+    Serial.println("\nparsed json");          
     JsonArray& wifi = json["wifi"];//parseo del ficehro que he leido
 /************************/
     for(uint8_t i=0;i<wifi.size();i++)

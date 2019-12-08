@@ -103,7 +103,7 @@ boolean parseaConfiguracionMQTT(String contenido)
   //json.printTo(Serial);
   if (json.success()) 
     {
-    Serial.println("parsed json");
+    Serial.println("\nparsed json");
 //******************************Parte especifica del json a leer********************************
     ID_MQTT=json.get<String>("ID_MQTT");
     IPBroker.fromString(json.get<String>("IPBroker"));
@@ -264,10 +264,9 @@ boolean conectaMQTT(void)
   
   while (!clienteMQTT.connected()) 
     {    
-    if(debugGlobal) Serial.println("No conectado, intentando conectar.");
-  
     // Attempt to connect
-    Serial.printf("Parametros MQTT:\nID_MQTT: %s\nusuarioMQTT: %s\npasswordMQTT: %s\nWILL_TOPIC: %s\nWILL_QOS: %i\nWILL_RETAIN: %i\nWILL_MSG: %s\nCLEAN_SESSION: %i\n",ID_MQTT.c_str(),usuarioMQTT.c_str(),passwordMQTT.c_str(),(topicRoot+"/"+String(WILL_TOPIC)).c_str(), WILL_QOS, WILL_RETAIN,String(WILL_MSG).c_str(),CLEAN_SESSION);
+    Serial.println("No conectado, intentando conectar.");
+    if(debugGlobal) Serial.printf("Parametros MQTT:\nID_MQTT: %s\nusuarioMQTT: %s\npasswordMQTT: %s\nWILL_TOPIC: %s\nWILL_QOS: %i\nWILL_RETAIN: %i\nWILL_MSG: %s\nCLEAN_SESSION: %i\n",ID_MQTT.c_str(),usuarioMQTT.c_str(),passwordMQTT.c_str(),(topicRoot+"/"+String(WILL_TOPIC)).c_str(), WILL_QOS, WILL_RETAIN,String(WILL_MSG).c_str(),CLEAN_SESSION);
    
     //boolean connect(const char* id, const char* user, const char* pass, const char* willTopic, uint8_t willQos, boolean willRetain, const char* willMessage, boolean cleanSession);
     if (clienteMQTT.connect(ID_MQTT.c_str(), usuarioMQTT.c_str(), passwordMQTT.c_str(), (topicRoot+"/"+String(WILL_TOPIC)).c_str(), WILL_QOS, WILL_RETAIN, String(WILL_MSG).c_str(), CLEAN_SESSION))

@@ -7,11 +7,11 @@
  * 
  * Servicio web levantado en puerto PUERTO_WEBSERVER
  */
- 
+
 /***************************** Defines *****************************/
 //Defines generales
 #define NOMBRE_FAMILIA   "Actuador/Secuenciador (E/S)"
-#define VERSION          "4.1.0 (ESP8266v2.4.2 OTA|MQTT|Logic+|Secuenciador)"
+#define VERSION          "4.2.0 (ESP8266v2.4.2 OTA|MQTT|Logic+|Secuenciador)"
 #define SEPARADOR        '|'
 #define SUBSEPARADOR     '#'
 #define KO               -1
@@ -46,9 +46,10 @@
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
+#include <FS.h>     //this needs to be first, or it all crashes and burns...
 #include <TimeLib.h>  // download from: http://www.arduino.cc/playground/Code/Time
 #include <ESP8266WiFi.h>
-#include <ESP8266mDNS.h>
+//#include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <ArduinoJson.h>
@@ -176,7 +177,7 @@ void loop()
   while(millis()<EntradaBucle+ANCHO_INTERVALO)
     {
     if(millis()<EntradaBucle) break; //cada 49 dias el contador de millis desborda
-    delayMicroseconds(1000);
+    delay(1);
     }
   }
 
@@ -221,7 +222,7 @@ boolean parseaConfiguracionGlobal(String contenido)
   //json.printTo(Serial);
   if (json.success()) 
     {
-    Serial.println("parsed json");
+    Serial.println("\nparsed json");
 //******************************Parte especifica del json a leer********************************
     if (json.containsKey("nombre_dispositivo")) nombre_dispositivo=((const char *)json["nombre_dispositivo"]);    
     if(nombre_dispositivo==NULL) nombre_dispositivo=String(NOMBRE_FAMILIA);
@@ -258,7 +259,7 @@ String generaJsonConfiguracionNivelActivo(String configActual, int nivelAct)
   json.printTo(Serial);
   if (json.success()) 
     {
-    Serial.println("parsed json");          
+    Serial.println("\nparsed json");          
 
 //******************************Parte especifica del json a modificar*****************************
     json["NivelActivo"]=nivelAct;

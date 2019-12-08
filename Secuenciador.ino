@@ -93,7 +93,7 @@ boolean parseaConfiguracionSecuenciador(String contenido)
   json.printTo(Serial);
   if (!json.success()) return false;
         
-  Serial.println("parsed json");
+  Serial.println("\nparsed json");
 //******************************Parte especifica del json a leer********************************  
   secuenciadorActivo=json["estadoInicial"];
   
