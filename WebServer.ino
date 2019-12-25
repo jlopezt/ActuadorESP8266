@@ -393,6 +393,15 @@ void handleInfo(void)
   String cad=cabeceraHTML;
 
   cad+= "<BR>-----------------info logica-----------------<BR>";
+  cad += "Hora actual: " + NTP.getTimeDateString(); 
+  cad += "<BR>";  
+  cad += "Primera sincronizacion: " + NTP.getTimeDateString(NTP.getFirstSync()); 
+  cad += "<BR>";  
+  cad += "Ultima sincronizacion: " + NTP.getTimeDateString(NTP.getLastNTPSync()); 
+  cad += "<BR>";  
+  cad += "Ultimo evento SNTP: " + lastEvent; 
+  cad += "<BR>";  
+  
   cad += "IP: " + String(getIP(debugGlobal));
   cad += "<BR>";  
   cad += "nivelActivo: " + String(nivelActivo);

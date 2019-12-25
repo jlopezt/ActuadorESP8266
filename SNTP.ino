@@ -8,17 +8,18 @@
 #define MES_CAMBIO_HORARIO_DOWN 10 //octubre
 #define DOMINGO 7
 
-String Semana[7]={"Domingo","Lunes","Martes","Miercoles","Jueves","Viernes","Sabado"};
-
 #include <time.h>
 #include <TimeLib.h>
 #include <NtpClientLib.h>
+
+String Semana[7]={"Domingo","Lunes","Martes","Miercoles","Jueves","Viernes","Sabado"};
 
 int8_t timeZone = 1;             //Madrid es zona UTC+1
 int8_t minutesTimeZone = 0;      //la diferencia de tiempo son horas enteras
 
 boolean syncEventTriggered = false; // True if a time even has been triggered
 NTPSyncEvent_t ntpEvent;            // Last triggered event
+String lastEvent="";                // Almacena el ultimo evento
 
 const char* NTP_SERVER = "pool.ntp.org";//"ntp.mydomain.com";
 //const char* TZ_INFO    = "CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/02:00:00";
@@ -73,6 +74,14 @@ tm_yday int days since January 1  0-365
 tm_isdst int Daylight Saving Time flag 
 ***********************/
 
+/******************eventos: 
+typedef enum {
+    timeSyncd, // Time successfully got from NTP server
+    noResponse, // No response from server
+    invalidAddress // Address not reachable
+} NTPSyncEvent_t;      
+*******************************************************/
+
 /****************************************************/
 /*                                                  */
 /*    Inicializa el modulo de SNTP                  */ 
@@ -84,22 +93,43 @@ void inicializaReloj(void)
   NTP.onNTPSyncEvent ([](NTPSyncEvent_t event) {
       ntpEvent = event;
       syncEventTriggered = true;
-      /*eventos: 
-       * typedef enum {
-            timeSyncd, // Time successfully got from NTP server
-            noResponse, // No response from server
-            invalidAddress // Address not reachable
-          } NTPSyncEvent_t;
-       */
-      Serial.printf("Evento recibido %i | hora: %s\n",ntpEvent,NTP.getTimeDateString ().c_str());
   });
   
   //Inicio el SNTP
   Serial.println("Iniciando objeto NTP");
   NTP.begin(NTP_SERVER, timeZone, true, minutesTimeZone);
   NTP.setDayLight(true);//En España hay horario de verano 
-  //NTP.setInterval (3600*24);//ajustado a un dia
-  Serial.printf("Intervalo de actualizacion: %i segundos\n",NTP.getInterval()); 
+  NTP.setInterval(60*5,3600*24);//ajustado cada 5 minutos hasta sincronizar, luego un vez al dia
+  
+  Serial.printf("Intervalo de actualizacion inicial: %i segundos | Intervalo de actualizacion normal: %i segundos\n",NTP.getShortInterval(),NTP.getInterval()); 
+  Serial.printf("Hora actual: %s\n", NTP.getTimeDateString().c_str()); 
+  }
+
+/****************************************************/
+/*                                                  */
+/*         Procesado de eventos SNTP                */
+/*             Solo pinta info                      */ 
+/*                                                  */
+/****************************************************/
+void actualizaSNTP(boolean debug)
+  {
+  if (syncEventTriggered) 
+    {
+    if(debug) Serial.printf("Evento recibido %i | hora: %s\n",ntpEvent,NTP.getTimeDateString().c_str());
+
+    if (ntpEvent) 
+      {
+      lastEvent = "Time Sync error: ";
+      if (ntpEvent == noResponse) lastEvent += "Servidor NTP no alcanzable";
+      else if (ntpEvent == invalidAddress) lastEvent += "Direccion del servidor NTP invalida";
+      } 
+    else lastEvent = "Sincronizada hora por NTP: " + NTP.getTimeDateString(NTP.getLastNTPSync ());
+  
+    lastEvent = "Evento: " + String(ntpEvent) + " - " + lastEvent;
+    Serial.printf("Descripcion del evento: %s\n", lastEvent.c_str());    
+
+    syncEventTriggered = false;
+    }
   }
   
 /*******************************************************************/

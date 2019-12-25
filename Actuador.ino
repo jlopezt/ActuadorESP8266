@@ -11,7 +11,7 @@
 /***************************** Defines *****************************/
 //Defines generales
 #define NOMBRE_FAMILIA   "Actuador/Secuenciador (E/S)"
-#define VERSION          "4.2.0 (ESP8266v2.4.2 OTA|MQTT|Logic+|Secuenciador)"
+#define VERSION          "4.2.1 (ESP8266v2.4.2 OTA|MQTT|Logic+|Secuenciador|eventos SNTP)"
 #define SEPARADOR        '|'
 #define SUBSEPARADOR     '#'
 #define KO               -1
@@ -43,6 +43,7 @@
 #define FRECUENCIA_MQTT          10 //cada cuantas vueltas de loop envia y lee del broker MQTT
 #define FRECUENCIA_ENVIO_DATOS  100 //cada cuantas vueltas de loop envia al broker el estado de E/S
 #define FRECUENCIA_ORDENES        2 //cada cuantas vueltas de loop atiende las ordenes via serie 
+#define FRECUENCIA_SNTP         100 //cada cuantas vueltas de loop atiende los eventos SNTP recibidos
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
@@ -163,6 +164,7 @@ void loop()
   if ((vuelta % FRECUENCIA_ENTRADAS)==0) consultaEntradas(debugGlobal); //comprueba las entradas
   if ((vuelta % FRECUENCIA_SALIDAS)==0) actualizaSalidas(debugGlobal); //comprueba las salidas
   if ((vuelta % FRECUENCIA_SECUENCIADOR)==0) actualizaSecuenciador(debugGlobal); //Actualiza la salida del secuenciador
+  if ((vuelta % FRECUENCIA_SNTP)==0) actualizaSNTP(debugGlobal); //Actualiza los eventos SNT recibidos
   //Prioridad 3: Interfaces externos de consulta    
   if ((vuelta % FRECUENCIA_SERVIDOR_WEB)==0) webServer(debugGlobal); //atiende el servidor web
   if ((vuelta % FRECUENCIA_MQTT)==0) atiendeMQTT();      
