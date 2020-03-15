@@ -5,10 +5,9 @@
 /*  Control de la IP, DefaulGw, DNS...        */
 /*                                            */
 /**********************************************/
+//needed for library
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiMulti.h>
-
-//needed for library
 #include <ESP8266WebServer.h>
 #include <DNSServer.h>
 #include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
@@ -99,7 +98,7 @@ boolean parseaConfiguracionWifi(String contenido)
   JsonObject& json = jsonBuffer.parseObject(contenido.c_str());
   if (json.success()) 
     {
-    Serial.println("\nparsed json");
+    Serial.println("parsed json");
 //******************************Parte especifica del json a leer********************************
     if (json.containsKey("wifiIP")) wifiIP.fromString((const char *)json["wifiIP"]); 
     if (json.containsKey("wifiGW")) wifiGW.fromString((const char *)json["wifiGW"]);
@@ -274,7 +273,7 @@ String generaJsonConfiguracionWifi(String configActual, String ssid, String pass
   json.printTo(Serial);
   if (json.success()) 
     {
-    Serial.println("\nparsed json");          
+    Serial.println("parsed json");          
     JsonArray& wifi = json["wifi"];//parseo del ficehro que he leido
 /************************/
     for(uint8_t i=0;i<wifi.size();i++)

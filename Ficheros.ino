@@ -4,6 +4,8 @@
 /* memoria del modulo esp6288                   */
 /*                                              */
 /************************************************/
+#include <FS.h>     //this needs to be first, or it all crashes and burns...
+//#include <SPIFFS.h> //para el ESP32
 
 /************************************************/
 /* Inicializa el sistema de ficheros del modulo */
@@ -165,7 +167,7 @@ boolean listaFicheros(String &contenido)
     contenido += SEPARADOR;
     }
     
-  return true;
+  return (true);
   }  
 
 /************************************************/

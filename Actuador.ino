@@ -11,7 +11,7 @@
 /***************************** Defines *****************************/
 //Defines generales
 #define NOMBRE_FAMILIA   "Actuador/Secuenciador (E/S)"
-#define VERSION          "4.2.1 (ESP8266v2.4.2 OTA|MQTT|Logic+|Secuenciador|eventos SNTP)"
+#define VERSION          "4.3.0 (ESP8266v2.4.2 OTA|MQTT|Logic+|Secuenciador|eventos SNTP|Alineado ESP32)"
 #define SEPARADOR        '|'
 #define SUBSEPARADOR     '#'
 #define KO               -1
@@ -32,6 +32,10 @@
 #define MQTT_CONFIG_BAK_FILE             "/MQTTConfig.json.bak"
 #define SECUENCIADOR_CONFIG_FILE         "/SecuenciadorConfig.json"
 #define SECUENCIADOR_CONFIG_BAK_FILE     "/SecuenciadorConfig.json.bak"
+#define GHN_CONFIG_FILE                  "/GHNConfig.json"
+#define GHN_CONFIG_BAK_FILE              "/GHNConfig.json.bak"
+#define MAQUINAESTADOS_CONFIG_FILE       "/MaqEstadosConfig.json"
+#define MAQUINAESTADOS_CONFIG_BAK_FILE   "/MaqEstadosConfig.json.bak"
 
 // Una vuela de loop son ANCHO_INTERVALO segundos 
 #define ANCHO_INTERVALO         100 //Ancho en milisegundos de la rodaja de tiempo
@@ -39,6 +43,7 @@
 #define FRECUENCIA_ENTRADAS       5 //cada cuantas vueltas de loop atiende las entradas
 #define FRECUENCIA_SALIDAS        5 //cada cuantas vueltas de loop atiende las salidas
 #define FRECUENCIA_SECUENCIADOR  10 //cada cuantas vueltas de loop atiende al secuenciador
+#define FRECUENCIA_MAQUINAESTADOS 10 //cada cuantas vueltas de loop atiende a la maquina de estados
 #define FRECUENCIA_SERVIDOR_WEB   1 //cada cuantas vueltas de loop atiende el servidor web
 #define FRECUENCIA_MQTT          10 //cada cuantas vueltas de loop envia y lee del broker MQTT
 #define FRECUENCIA_ENVIO_DATOS  100 //cada cuantas vueltas de loop envia al broker el estado de E/S
@@ -47,11 +52,11 @@
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
-#include <FS.h>     //this needs to be first, or it all crashes and burns...
-#include <TimeLib.h>  // download from: http://www.arduino.cc/playground/Code/Time
+//#include <FS.h>     //this needs to be first, or it all crashes and burns...
+//#include <TimeLib.h>  // download from: http://www.arduino.cc/playground/Code/Time
+//#include <WiFiUdp.h>
 #include <ESP8266WiFi.h>
-//#include <ESP8266mDNS.h>
-#include <WiFiUdp.h>
+#include <ESP8266mDNS.h>
 #include <ArduinoOTA.h>
 #include <ArduinoJson.h>
 /***************************** Includes *****************************/
@@ -93,8 +98,8 @@ void setup()
     {
     candado=false;
     //Genera candado
-    if(salvaFichero(FICHERO_CANDADO,"","JSD")) Serial.println("Candado creado");
-    else Serial.println("ERROR - No se pudo crear el candado");
+ /*   if(salvaFichero(FICHERO_CANDADO,"","JSD")) Serial.println("Candado creado");
+    else Serial.println("ERROR - No se pudo crear el candado");*/
     }
  
   //Configuracion general
@@ -133,6 +138,10 @@ void setup()
   Serial.println("\n\nInit secuenciador ---------------------------------------------------------------------\n");
   inicializaSecuenciador();
   
+  //Maquina de estados
+  Serial.println("\n\nInit maquina de estados----------------------------------------------------------------\n");
+  inicializaMaquinaEstados();
+  
   //Ordenes serie
   Serial.println("\n\nInit Ordenes ----------------------------------------------------------------------\n");  
   inicializaOrden();//Inicializa los buffers de recepcion de ordenes desde PC
@@ -159,12 +168,13 @@ void loop()
   //------------- EJECUCION DE TAREAS --------------------------------------
   //Acciones a realizar en el bucle   
   //Prioridad 0: OTA es prioritario.
-  if ((vuelta % FRECUENCIA_OTA)==0) ArduinoOTA.handle(); //Gestion de actualizacion OTA
+  if ((vuelta % FRECUENCIA_OTA)==0) gestionaOTA(); //Gestion de actualizacion OTA
   //Prioridad 2: Funciones de control.
   if ((vuelta % FRECUENCIA_ENTRADAS)==0) consultaEntradas(debugGlobal); //comprueba las entradas
   if ((vuelta % FRECUENCIA_SALIDAS)==0) actualizaSalidas(debugGlobal); //comprueba las salidas
   if ((vuelta % FRECUENCIA_SECUENCIADOR)==0) actualizaSecuenciador(debugGlobal); //Actualiza la salida del secuenciador
   if ((vuelta % FRECUENCIA_SNTP)==0) actualizaSNTP(debugGlobal); //Actualiza los eventos SNT recibidos
+  if ((vuelta % FRECUENCIA_MAQUINAESTADOS)==0) actualizaMaquinaEstados(debugGlobal); //Actualiza la maquina de estados
   //Prioridad 3: Interfaces externos de consulta    
   if ((vuelta % FRECUENCIA_SERVIDOR_WEB)==0) webServer(debugGlobal); //atiende el servidor web
   if ((vuelta % FRECUENCIA_MQTT)==0) atiendeMQTT();      
@@ -224,7 +234,7 @@ boolean parseaConfiguracionGlobal(String contenido)
   //json.printTo(Serial);
   if (json.success()) 
     {
-    Serial.println("\nparsed json");
+    Serial.println("parsed json");
 //******************************Parte especifica del json a leer********************************
     if (json.containsKey("nombre_dispositivo")) nombre_dispositivo=((const char *)json["nombre_dispositivo"]);    
     if(nombre_dispositivo==NULL) nombre_dispositivo=String(NOMBRE_FAMILIA);
@@ -261,7 +271,7 @@ String generaJsonConfiguracionNivelActivo(String configActual, int nivelAct)
   json.printTo(Serial);
   if (json.success()) 
     {
-    Serial.println("\nparsed json");          
+    Serial.println("parsed json");          
 
 //******************************Parte especifica del json a modificar*****************************
     json["NivelActivo"]=nivelAct;

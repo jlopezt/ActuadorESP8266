@@ -5,6 +5,6 @@
 "passwordMQTT": "password", 
 "ID_MQTT": "navidadPre", 
 "topicRoot": "casaPre", 
-"publicarEntradas": 0,
+"publicarEntradas": 1,
 "publicarSalidas": 1
 }

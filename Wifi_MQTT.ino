@@ -103,7 +103,7 @@ boolean parseaConfiguracionMQTT(String contenido)
   //json.printTo(Serial);
   if (json.success()) 
     {
-    Serial.println("\nparsed json");
+    Serial.println("parsed json");
 //******************************Parte especifica del json a leer********************************
     ID_MQTT=json.get<String>("ID_MQTT");
     IPBroker.fromString(json.get<String>("IPBroker"));
@@ -163,12 +163,11 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length)
 void respondeGenericoMQTT(char* topic, byte* payload, unsigned int length)
   {  
   char mensaje[length+1];
-
-  Serial.printf("Recibido mensaje Ping:\ntopic: %s\npayload: %s\nlength: %i\n",topic,payload,length);
   
   //copio el payload en la cadena mensaje
   for(int8_t i=0;i<length;i++) mensaje[i]=payload[i];
   mensaje[length]=0;//añado el final de cadena 
+  Serial.printf("Recibido mensaje:\ntopic: %s\npayload: %s\nlength: %i\n\n",topic,mensaje,length);
 
   /**********************Leo el JSON***********************/
   const size_t bufferSize = JSON_OBJECT_SIZE(3) + 50;
@@ -181,6 +180,8 @@ void respondeGenericoMQTT(char* topic, byte* payload, unsigned int length)
     }
 
   //Leo el rele y el valor a setear
+  if(root.containsKey("id") && root.containsKey("estado"))
+    {
   int id=atoi(root["id"]);      
   int estado;
   if(root["estado"]=="off") estado=0;       
@@ -188,6 +189,8 @@ void respondeGenericoMQTT(char* topic, byte* payload, unsigned int length)
   else if(root["estado"]=="pulso") estado=2;     
    
   actuaRele(id, estado);
+    }
+  else Serial.printf("Mensaje no esperado: %s\n",mensaje);
   /**********************Fin JSON***********************/    
   }
   
@@ -225,7 +228,6 @@ void respondePingMQTT(char* topic, byte* payload, unsigned int length)
   String P= generaJSONPing(false).c_str();
   Serial.printf("Topic: %s\nPayload: %s\n",T.c_str(),P.c_str());
   Serial.printf("Resultado: %i\n", clienteMQTT.publish(T.c_str(),P.c_str()));   
-  //enviarMQTT(T.c_str(),P.c_str());
   /**********************Fin JSON***********************/    
   }
 
@@ -264,9 +266,10 @@ boolean conectaMQTT(void)
   
   while (!clienteMQTT.connected()) 
     {    
+    if(debugGlobal) Serial.println("No conectado, intentando conectar.");
+  
     // Attempt to connect
-    Serial.println("No conectado, intentando conectar.");
-    if(debugGlobal) Serial.printf("Parametros MQTT:\nID_MQTT: %s\nusuarioMQTT: %s\npasswordMQTT: %s\nWILL_TOPIC: %s\nWILL_QOS: %i\nWILL_RETAIN: %i\nWILL_MSG: %s\nCLEAN_SESSION: %i\n",ID_MQTT.c_str(),usuarioMQTT.c_str(),passwordMQTT.c_str(),(topicRoot+"/"+String(WILL_TOPIC)).c_str(), WILL_QOS, WILL_RETAIN,String(WILL_MSG).c_str(),CLEAN_SESSION);
+    Serial.printf("Parametros MQTT:\nID_MQTT: %s\nusuarioMQTT: %s\npasswordMQTT: %s\nWILL_TOPIC: %s\nWILL_QOS: %i\nWILL_RETAIN: %i\nWILL_MSG: %s\nCLEAN_SESSION: %i\n",ID_MQTT.c_str(),usuarioMQTT.c_str(),passwordMQTT.c_str(),(topicRoot+"/"+String(WILL_TOPIC)).c_str(), WILL_QOS, WILL_RETAIN,String(WILL_MSG).c_str(),CLEAN_SESSION);
    
     //boolean connect(const char* id, const char* user, const char* pass, const char* willTopic, uint8_t willQos, boolean willRetain, const char* willMessage, boolean cleanSession);
     if (clienteMQTT.connect(ID_MQTT.c_str(), usuarioMQTT.c_str(), passwordMQTT.c_str(), (topicRoot+"/"+String(WILL_TOPIC)).c_str(), WILL_QOS, WILL_RETAIN, String(WILL_MSG).c_str(), CLEAN_SESSION))
@@ -305,7 +308,9 @@ boolean enviarMQTT(String topic, String payload)
   //si y esta conectado envio, sino salgo con error
   if (clienteMQTT.connected()) 
     {
-    String topicCompleto=topicRoot+"/"+ID_MQTT+"/"+topic;  
+//    String topicCompleto=topicRoot+"/"+ID_MQTT+"/"+topic;  
+    String topicCompleto=topicRoot+"/"+topic;  
+    
     //Serial.printf("Enviando:\ntopic:  %s | payload: %s\n",topicCompleto.c_str(),payload.c_str());
   
     if(clienteMQTT.beginPublish(topicCompleto.c_str(), payload.length(), false))//boolean beginPublish(const char* topic, unsigned int plength, boolean retained)
@@ -341,7 +346,7 @@ void enviaDatos(boolean debug)
     {
     payload=generaJsonEstadoEntradas();//genero el json de las entradas
     //Lo envio al bus    
-    if(enviarMQTT("entradas", payload)) if(debug)Serial.println("Enviado json al broker con exito.");
+    if(enviarMQTT(ID_MQTT+"/"+"entradas", payload)) if(debug)Serial.println("Enviado json al broker con exito.");
     else if(debug)Serial.println("¡¡Error al enviar json al broker!!");
     }
   else if(debug)Serial.printf("No publico entradas. Publicar entradas es %i\n",publicarEntradas);
@@ -350,7 +355,7 @@ void enviaDatos(boolean debug)
     {
     payload=generaJsonEstadoSalidas();//genero el json de las salidas
     //Lo envio al bus    
-    if(enviarMQTT("salidas", payload)) if(debug)Serial.println("Enviado json al broker con exito.");
+    if(enviarMQTT(ID_MQTT+"/"+"salidas", payload)) if(debug)Serial.println("Enviado json al broker con exito.");
     else if(debug)Serial.println("¡¡Error al enviar json al broker!!");  
     }  
   else if(debug)Serial.printf("No publico salidas. Publicar salidas es %i\n",publicarSalidas);  

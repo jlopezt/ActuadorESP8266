@@ -19,7 +19,7 @@ ESP8266WebServer server(PUERTO_WEBSERVER);
 
 //Cadenas HTML precargadas
 String cabeceraHTML="";
-String enlaces="<TABLE>\n<CAPTION>Enlaces</CAPTION>\n<TR><TD><a href=\"info\" target=\"_self\">Info</a></TD></TR>\n<TR><TD><a href=\"test\" target=\"_self\">Test</a></TD></TR>\n<TR><TD><a href=\"restart\" target=\"_self\">Restart</a></TD></TR>\n<TR><TD><a href=\"listaFicheros\" target=\"_self\">Lista ficheros</a></TD></TR>\n<TR><TD><a href=\"estado\" target=\"_self\">Estado</a></TD></TR>\n<TR><TD><a href=\"estadoSalidas\" target=\"_self\">Estado salidas</a></TD></TR>\n<TR><TD><a href=\"estadoEntradas\" target=\"_self\">Estado entradas</a></TD></TR>\n<TR><TD><a href=\"planes\" target=\"_self\">Planes del secuenciador</a></TD></TR></TABLE>\n"; 
+String enlaces="<TABLE>\n<CAPTION>Enlaces</CAPTION>\n<TR><TD><a href=\"info\" target=\"_self\">Info</a></TD></TR>\n<TR><TD><a href=\"test\" target=\"_self\">Test</a></TD></TR>\n<TR><TD><a href=\"restart\" target=\"_self\">Restart</a></TD></TR>\n<TR><TD><a href=\"listaFicheros\" target=\"_self\">Lista ficheros</a></TD></TR>\n<TR><TD><a href=\"estado\" target=\"_self\">Estado</a></TD></TR>\n<TR><TD><a href=\"estadoSalidas\" target=\"_self\">Estado salidas</a></TD></TR>\n<TR><TD><a href=\"estadoEntradas\" target=\"_self\">Estado entradas</a></TD></TR>\n<TR><TD><a href=\"planes\" target=\"_self\">Planes del secuenciador</a></TD></TR>\n<TR><TD><a href=\"maquinaEstados\" target=\"_self\">Maquina de estados</a></TD></TR></TABLE>\n"; 
 String pieHTML="</BODY></HTML>";
 
 /*********************************** Inicializacion y configuracion *****************************************************************/
@@ -28,6 +28,8 @@ void inicializaWebServer(void)
   //lo inicializo aqui, despues de leer el nombre del dispositivo en la configuracion del cacharro
   cabeceraHTML="<HTML><HEAD><TITLE>" + nombre_dispositivo + " </TITLE></HEAD><BODY><h1><a href=\"../\" target=\"_self\">" + nombre_dispositivo + "</a><br></h1>";
   
+  /*******Configuracion del Servicio Web***********/  
+  //Inicializo los serivcios  
   //decalra las URIs a las que va a responder
   server.on("/", handleRoot); //Responde con la iodentificacion del modulo
   server.on("/estado", handleEstado); //Servicio de estdo de reles
@@ -39,6 +41,7 @@ void inicializaWebServer(void)
   server.on("/planes", handlePlanes);  //Servicio de representacion del plan del secuenciador
   server.on("/activaSecuenciador", handleActivaSecuenciador);  //Servicio para activar el secuenciador
   server.on("/desactivaSecuenciador", handleDesactivaSecuenciador);  //Servicio para desactivar el secuenciador
+  server.on("/maquinaEstados", handleMaquinaEstados);  //Servicio de representacion de las transiciones d ela maquina de estados
       
   server.on("/test", handleTest);  //URI de test
   server.on("/reset", handleReset);  //URI de test  
@@ -55,10 +58,13 @@ void inicializaWebServer(void)
   server.on("/edit.html",  HTTP_POST, []() {  // If a POST request is sent to the /edit.html address,
                                            server.send(200, "text/plain", ""); 
                                            }, handleFileUpload);                       // go to 'handleFileUpload'
+  server.on("/speech", handleSpeechPath);
+  server.on("/habla", handleHablaPath);
   
   server.onNotFound(handleNotFound);//pagina no encontrada
 
   server.begin();
+  
   Serial.println("HTTP server started");
   }
 
@@ -92,7 +98,8 @@ void handleRoot()
   cad += "<CAPTION>Entradas</CAPTION>\n";  
   for(int8_t i=0;i<MAX_ENTRADAS;i++)
     {
-    if(entradas[i].configurada==CONFIGURADO) cad += "<TR><TD>" + entradas[i].nombre + "-></TD><TD>" + String(entradas[i].estado) + "</TD></TR>\n";
+    //if(entradas[i].configurada==CONFIGURADO) cad += "<TR><TD>" + entradas[i].nombre + "-></TD><TD>" + String(entradas[i].estado) + "</TD></TR>\n";
+    if(entradas[i].configurada==CONFIGURADO) cad += "<TR><TD>" + entradas[i].nombre + "-></TD><TD>" + String(entradas[i].nombreEstados[entradas[i].estado]) + "</TD></TR>\n";
     }
   cad += "</TABLE>\n";
   cad += "<BR>";
@@ -100,17 +107,21 @@ void handleRoot()
   //Salidas
   cad += "\n<TABLE style=\"border: 2px solid blue\">\n";
   cad += "<CAPTION>Salidas</CAPTION>\n";  
-  for(int8_t i=0;i<MAX_RELES;i++)
+  for(int8_t i=0;i<MAX_SALIDAS;i++)
     {
     if(releConfigurado(i)==CONFIGURADO)
       {      
       cad += "<TR>\n";
       cad += "<TD>" + nombreRele(i) + "-></TD><TD>" + String(estadoRele(i)) + "</TD>";            
-
+/*Se sustituye por el bloque siguiente
       //compruebo si esta asociada a un plan de secuenciador
       if(asociadaASecuenciador(i)!=NO_CONFIGURADO && estadoSecuenciador())//Si esa asociada a un secuenciador o el secuenciador esta on
         {
         cad += "<TD colspan=2> | Secuenciador " + String(asociadaASecuenciador(i)) + "</TD>";
+        }
+      else if(salidaSeguimiento(i)!=NO_CONFIGURADO)
+        {
+        cad += "<TD>Siguiendo a entrada " + String(salidaSeguimiento(i)) + "</TD>";
         }
       else      
         {
@@ -120,7 +131,27 @@ void handleRoot()
         //Enlace para generar un pulso
         cad += "<TD><a href=\"pulsoRele\?id=" + String(i) + "\" target=\"_self\">Pulso</a></TD>\n";
         }
-        
+  */
+        //acciones en funcion del modo
+        switch (getModoSalida(i))          
+          {
+          case MODO_MANUAL:
+            //Enlace para activar o desactivar
+            if (estadoRele(i)==1) orden="desactiva"; else orden="activa";//para 0 y 2 (apagado y en pulso) activa
+            cad += "<TD><a href=\"" + orden + "Rele\?id=" + String(i) + "\" target=\"_self\">" + orden + " rele</a></TD>\n";  
+            //Enlace para generar un pulso
+            cad += "<TD><a href=\"pulsoRele\?id=" + String(i) + "\" target=\"_self\">Pulso</a></TD>\n";
+            break;
+          case MODO_SECUENCIADOR:
+            cad += "<TD colspan=2> | Secuenciador " + String(asociadaASecuenciador(i)) + "</TD>";
+            break;
+          case MODO_SEGUIMIENTO:
+            cad += "<TD>Siguiendo a entrada " + String(salidaSeguimiento(i)) + "</TD>";
+            break;
+          default://Salida no configurada
+            cad += "<TD>¿?>/TD>";  
+          }
+
       cad += "</TR>\n";        
       }
     }
@@ -146,6 +177,65 @@ void handleRoot()
   cad += "<BR><BR>\n";
   cad += enlaces;
   cad += "<BR><BR>" + nombre_dispositivo + " . Version " + String(VERSION) + ".";
+
+  server.send(200, "text/html", cad);
+  }
+
+/*************************************************/
+/*                                               */
+/*  Servicio de consulta de las transiciones de  */
+/*  la maquina de estados                        */
+/*                                               */
+/*************************************************/  
+void handleMaquinaEstados(void)
+  {
+  String cad="";
+  String orden="";
+
+  //genero la respuesta por defecto
+  cad += cabeceraHTML;
+
+  //Estados
+  cad += "<TABLE style=\"border: 2px solid black\">\n";
+  cad += "<CAPTION>ESTADOS</CAPTION>\n";  
+
+  cad += "<TR>"; 
+  cad += "<TD>id</TD>";  
+  cad += "<TD>Nombre</TD>";
+  for(uint8_t i=0;i<getNumSalidasME();i++) cad += "<TD>Salida " + String(i) + "</TD>";
+  cad += "</TR>"; 
+    
+  for(uint8_t i=0;i<getNumEstados();i++)
+    {
+    cad += "<TR>";  
+    cad += "<TD>" + String(i) + "</TD>";  
+    cad += "<TD>" + estados[i].nombre + "</TD>";
+    for(uint8_t j=0;j<getNumSalidasME();j++) cad += "<TD>" + String(estados[i].salidasAsociadas[j]) + "</TD>";
+    cad += "</TR>";
+    }
+  cad += "</TABLE>";
+
+  cad += "<BR><BR>";
+  
+  //Transiciones
+  cad += "<TABLE style=\"border: 2px solid black\">\n";
+  cad += "<CAPTION>TRANSICIONES</CAPTION>\n";  
+
+  cad += "<TR>";
+  cad += "<TD>Inicial</TD>";
+  for(uint8_t i=0;i<getNumEntradasME();i++) cad += "<TD>Entrada " + String(i) + "</TD>";
+  cad += "<TD>Final</TD>";  
+  cad += "</TR>";
+  
+  for(uint8_t i=0;i<getNumTransiciones();i++)
+    {
+    cad += "<TR>";
+    cad += "<TD>" + String(transiciones[i].estadoInicial) + "</TD>";
+    for(uint8_t j=0;j<getNumEntradasME();j++) cad += "<TD>" + String(transiciones[i].valorEntradas[j]) + "</TD>";
+    cad += "<TD>" + String(transiciones[i].estadoFinal) + "</TD>";    
+    cad += "</TR>";
+    }
+  cad += "</TABLE>";
 
   server.send(200, "text/html", cad);
   }
@@ -406,7 +496,7 @@ void handleInfo(void)
   cad += "<BR>";  
   cad += "nivelActivo: " + String(nivelActivo);
   cad += "<BR>";  
-  for(int8_t i=0;i<MAX_RELES;i++)
+  for(int8_t i=0;i<MAX_SALIDAS;i++)
     {
     cad += "Rele " + String(i) + " nombre: " + nombreRele(i) + "| estado: " + estadoRele(i);    
     cad += "<BR>";   
@@ -656,7 +746,7 @@ void handleNotFound()
     
   String message = "";
 
-  message = "<h1>" + String(NOMBRE_FAMILIA) + "<br></h1>";
+  message = "<h1>" + nombre_dispositivo + "<br></h1>";
   message += "File Not Found\n\n";
   message += "URI: ";
   message += server.uri();
@@ -877,3 +967,26 @@ void handleFileUpload()
       }
     }
   }
+
+/****************************Google Home Notifier ******************************/
+void handleSpeechPath() {
+  String phrase = server.arg("phrase");
+  if (phrase == "") {
+    server.send(401, "text / plain", "query 'phrase' is not found");
+    return;
+  }
+  
+
+  /*
+  if (ghn.notify(phrase.c_str()) != true) {
+    Serial.println(ghn.getLastError());
+    server.send(500, "text / plain", ghn.getLastError());
+    return;
+  }*/
+  //if(enviaNotificacion((char*)phrase.c_str())) server.send(200, "text / plain", "OK");
+  server.send(404, "text / plain", "KO");  
+}
+
+void handleHablaPath() {
+  server.send(200, "text/html", "<html><head></head><body><input type=\"text\"><button>speech</button><script>var d = document;d.querySelector('button').addEventListener('click',function(){xhr = new XMLHttpRequest();xhr.open('GET','/speech?phrase='+encodeURIComponent(d.querySelector('input').value));xhr.send();});</script></body></html>");
+}  
