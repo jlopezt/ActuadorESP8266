@@ -666,6 +666,7 @@ int8_t estadoLogicoEntrada(int8_t id)
   if(entradas[id].configurada!=CONFIGURADO) return NO_CONFIGURADO;
   
   //if(entradas[id].estado==nivelActivo) return 1;
+  //else return 0;
   if(entradas[id].estado==entradas[id].estadoActivo) return ESTADO_ACTIVO;
   else return ESTADO_DESACTIVO;
  }
