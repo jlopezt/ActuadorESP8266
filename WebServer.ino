@@ -983,8 +983,8 @@ void handleSpeechPath() {
     server.send(500, "text / plain", ghn.getLastError());
     return;
   }*/
-  //if(enviaNotificacion((char*)phrase.c_str())) server.send(200, "text / plain", "OK");
-  server.send(404, "text / plain", "KO");  
+  if(enviaNotificacion((char*)phrase.c_str())) server.send(200, "text / plain", "OK");
+  else server.send(404, "text / plain", "KO");  
 }
 
 void handleHablaPath() {

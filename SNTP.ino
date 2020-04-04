@@ -276,7 +276,7 @@ String getHora(void)
 String getFecha(void)
   {
   String cad=""; 
-  char ss[3];
+  char ss[5];
 
   getLocalTime(&timeinfo);
   
