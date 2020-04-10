@@ -245,6 +245,10 @@ void inicializaOrden(void)
   comandos[i].descripcion="Debug de la maquina de estados";
   comandos[i++].p_func_comando=func_comando_debugMaquinaEstados;
 
+  comandos[i].comando="CheckConfig";
+  comandos[i].descripcion="Comprueba la configuracion del sistema";
+  comandos[i++].p_func_comando=func_comando_compruebaConfiguracion;
+
   //resto
   for(;i<MAX_COMANDOS;)
     {
@@ -293,13 +297,13 @@ void func_comando_nivelActivo(int iParametro, char* sParametro, float fParametro
 
 void func_comando_activa(int iParametro, char* sParametro, float fParametro)//"activa")
   {
-  conmutaRele(iParametro, nivelActivo, debugGlobal);  
+  conmutaRele(iParametro, ESTADO_ACTIVO, debugGlobal);  
   Serial.printf("\nRele %i activado\n",iParametro);
   }  
 
 void func_comando_desactiva(int iParametro, char* sParametro, float fParametro)//"desactiva")
   {
-  conmutaRele(iParametro, !nivelActivo, debugGlobal);
+  conmutaRele(iParametro, ESTADO_DESACTIVO, debugGlobal);
   Serial.printf("\nRele %i desactivado\n",iParametro);  
   }  
 
@@ -467,9 +471,9 @@ void func_comando_debug(int iParametro, char* sParametro, float fParametro)//"de
 void func_comando_ES(int iParametro, char* sParametro, float fParametro)//"debug")
   {
   Serial.println("Entradas");  
-  for(int8_t i=0;i<MAX_ENTRADAS;i++) Serial.printf("%i: nombre: %s | configurada: %i | estado: %i | tipo: %s | pin: %i\n",i,entradas[i].nombre.c_str(),entradas[i].configurada,entradas[i].estado,entradas[i].tipo.c_str(),entradas[i].pin);
+  for(int8_t i=0;i<MAX_ENTRADAS;i++) Serial.printf("%i: nombre: %s | configurada: %i | estado: %i | tipo: %s | pin: %i\n",i,nombreEntrada(i).c_str(),entradaConfigurada(i),estadoEntrada(i),tipoEntrada(i).c_str(),pinEntrada(i));
   Serial.println("Salidas");  
-  for(int8_t i=0;i<MAX_SALIDAS;i++) Serial.printf("%i: nombre: %s | configurado: %i | estado: %i | inicio: %i | pin: %i | modo: %i | controlador: %i | ancho pulso: %i | fin pulso: %i\n",i,salidas[i].nombre.c_str(),salidas[i].configurado,salidas[i].estado,salidas[i].inicio,salidas[i].pin,salidas[i].modo,salidas[i].controlador,salidas[i].anchoPulso,salidas[i].finPulso);  
+  for(int8_t i=0;i<MAX_SALIDAS;i++) Serial.printf("%i: nombre: %s | configurado: %i | estado: %i | inicio: %i | pin: %i | modo: %i | controlador: %i | ancho pulso: %i | fin pulso: %i\n",i,nombreSalida(i).c_str(),releConfigurado(i),estadoRele(i),inicioSalida(i),pinSalida(i),modoSalida(i),controladorSalida(i),anchoPulsoSalida(i),finPulsoSalida(i));  
   } 
 
 void func_comando_actSec(int iParametro, char* sParametro, float fParametro)//"debug")
@@ -510,5 +514,10 @@ void func_comando_debugMaquinaEstados(int iParametro, char* sParametro, float fP
   debugMaquinaEstados=!debugMaquinaEstados;
   if (debugMaquinaEstados) Serial.println("El debug de la maquina de estados esta on");
   else Serial.println("El debug de la maquina de estados esta off");
+  }  
+
+void func_comando_compruebaConfiguracion(int iParametro, char* sParametro, float fParametro)//"debug")
+  {
+  compruebaConfiguracion(0);
   }  
 /***************************** FIN funciones para comandos ******************************************/ 

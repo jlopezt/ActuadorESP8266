@@ -50,7 +50,7 @@ void inicializaSecuenciador()
       {
       if(planConfigurado(i)==CONFIGURADO)
         {  
-        if (releConfigurado(planes[i].rele)==NO_CONFIGURADO)
+        if (releConfigurado(planes[i].rele)==NO_CONFIGURADO || modoSalida(planes[i].rele)!=MODO_SECUENCIADOR)
           {
           Serial.printf("La salida asociada al plan %i no esta configurada\n", planes[i].rele);
           planes[i].configurado=NO_CONFIGURADO;
@@ -142,8 +142,8 @@ void actualizaSecuenciador(bool debug)
 
       if(debug) Serial.printf("Hora: %02i:%02i\nMascara: %i | intervalo: %i\n",hora(),minuto(),mascara,planes[i].horas[hora()]);
       
-      if(planes[i].horas[hora()] & mascara) conmutaRele(planes[i].rele, nivelActivo, debugGlobal);
-      else conmutaRele(planes[i].rele, !nivelActivo, debugGlobal);
+      if(planes[i].horas[hora()] & mascara) conmutaRele(planes[i].rele, ESTADO_ACTIVO, debugGlobal);
+      else conmutaRele(planes[i].rele, ESTADO_DESACTIVO, debugGlobal);
       }  
     }
   }
@@ -162,6 +162,18 @@ int8_t getNumPlanes()
     if(planes[i].configurado==CONFIGURADO) resultado++;
     }
   return resultado; 
+  }  
+
+/**************************************************/
+/*                                                */
+/* Devuelve el nuemro de salida asociada a un plan*/
+/*                                                */
+/**************************************************/
+int8_t getSalidaPlan(uint8_t plan)
+  {
+  if(plan>MAX_PLANES) return NO_CONFIGURADO;
+
+  return planes[plan].rele;  
   }  
 
 /********************************************************/

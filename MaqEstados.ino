@@ -24,15 +24,13 @@
 typedef struct {
   uint8_t id;
   String nombre;
-  uint8_t salidas;
-  int8_t salidasAsociadas[MAX_SALIDAS];
+  int8_t valorSalidas[MAX_SALIDAS];
   }estados_t;
 
 //Los lazos del grafo. Estado inicial, estado final y los valores de las entradas que gobiernan la transicion
 typedef struct {
   int8_t estadoInicial;
   int8_t estadoFinal;
-  uint8_t entradas;
   int8_t valorEntradas[MAX_ENTRADAS];
   }transicionEstados_t;
   
@@ -40,7 +38,7 @@ typedef struct {
 
 /********************variables locales**************************/
 uint8_t numeroEstados;
-uint8_t numeroTransiciones;
+uint8_t numeroTransiciones; //numero de lazos de la maquina de estados. A cada transicion se asocia un estado inicial, unos valores de las entradas y un estado final
 uint8_t numeroEntradas;
 uint8_t numeroSalidas;
 
@@ -50,7 +48,7 @@ uint8_t mapeoEntradas[MAX_ENTRADAS]; //posicion es la entrada de la maquina de e
 uint8_t mapeoSalidas[MAX_SALIDAS]; //posicion es la salida de la maquina de estados, el valor es el id de la salida del dispositivo
 
 uint8_t estadoActual;
-int8_t entradasActual[MAX_ENTRADAS];
+int8_t entradasActual[MAX_ENTRADAS]; //VAlor leido de las entradas
 int8_t salidasActual[MAX_SALIDAS];
 boolean debugMaquinaEstados;
 /************************************** Funciones de configuracion ****************************************/
@@ -84,8 +82,7 @@ void inicializaMaquinaEstados(void)
     //inicializo la parte logica
     estados[i].id=i;
     estados[i].nombre="Estado_" + String(i);
-    estados[i].salidas=0;
-    for(uint8_t j=0;j<MAX_SALIDAS;j++) estados[i].salidasAsociadas[j]=NO_CONFIGURADO;
+    for(uint8_t j=0;j<MAX_SALIDAS;j++) estados[i].valorSalidas[j]=NO_CONFIGURADO;
     }
 
   //Transiciones
@@ -94,7 +91,6 @@ void inicializaMaquinaEstados(void)
     //inicializo la parte logica
     transiciones[i].estadoInicial=NO_CONFIGURADO;
     transiciones[i].estadoFinal=NO_CONFIGURADO;
-    transiciones[i].entradas=0;
     for(uint8_t j=0;j<MAX_ENTRADAS;j++) transiciones[i].valorEntradas[j]=NO_CONFIGURADO;
     }
     
@@ -181,8 +177,8 @@ boolean parseaConfiguracionMaqEstados(String contenido)
       Serial.printf("Numero de salidas incorrecto en estado %i. definidas %i, esperadas %i\n",i,num_salidas,numeroSalidas);
       return false;
       }
-    
-    for(int8_t s=0;s<num_salidas;s++) estados[i].salidasAsociadas[s]=Salidas[s]["valor"];
+    //////EL ID NO VALE PARA NADA, LA REFERENCIA ES POSICIONAL. QUITAR ID/////////
+    for(int8_t s=0;s<num_salidas;s++) estados[i].valorSalidas[s]=Salidas.get<int>(s);//Salidas[s]["valor"];
     }
 
   Serial.printf("*************************\nEstados:\n"); 
@@ -193,7 +189,7 @@ boolean parseaConfiguracionMaqEstados(String contenido)
     Serial.printf("salidas:\n");
     for(int8_t s=0;s<numeroSalidas;s++) 
       {
-      Serial.printf("salida[%02i]: valor: %i\n",s,estados[i].salidasAsociadas[s]);
+      Serial.printf("salida[%02i]: valor: %i\n",s,estados[i].valorSalidas[s]);
       }
     }
   Serial.printf("*************************\n");  
@@ -217,7 +213,7 @@ boolean parseaConfiguracionMaqEstados(String contenido)
       return false;
       }
     
-    for(int8_t e=0;e<num_entradas;e++) transiciones[i].valorEntradas[e]=atoi(Entradas[e]["valor"]);//Puede ser -1, significa que no importa el valor
+    for(int8_t e=0;e<num_entradas;e++) transiciones[i].valorEntradas[e]=Entradas.get<int>(e);//atoi(Entradas[e]["valor"]);//Puede ser -1, significa que no importa el valor
     }
 
   Serial.printf("*************************\nTransiciones:\n"); 
@@ -248,7 +244,7 @@ void actualizaMaquinaEstados(int debug)
   boolean localDebug=debug || debugMaquinaEstados;
     
   //Actualizo el vaor de las entradas
-  for(uint8_t i=0;i<numeroEntradas;i++) entradasActual[i]=estadoLogicoEntrada(mapeoEntradas[i]);
+  for(uint8_t i=0;i<numeroEntradas;i++) entradasActual[i]=estadoEntrada(mapeoEntradas[i]);
 
   if(localDebug) 
     {
@@ -261,7 +257,7 @@ void actualizaMaquinaEstados(int debug)
   estadoActual=mueveMaquina(estadoActual, entradasActual, localDebug);
 
   //Actualizo las salidas segun el estado actual
-  actualizaSalidasMaquinaEstados(estadoActual);
+  if(actualizaSalidasMaquinaEstados(estadoActual)!=1) Serial.printf("Error al actualizar las salidas\n");
 
   if(localDebug) Serial.printf("Estado actual: (%i) %s\n",estadoActual,estados[estadoActual].nombre.c_str());
   }
@@ -273,20 +269,20 @@ void actualizaMaquinaEstados(int debug)
 uint8_t mueveMaquina(uint8_t estado, int8_t entradasActual[], boolean debug=false);
 uint8_t mueveMaquina(uint8_t estado, int8_t entradasActual[], boolean debug)
   {
-  for(uint8_t i=0;i<numeroTransiciones;i++) //las reglas se evaluan por orden
+  for(uint8_t regla=0;regla<numeroTransiciones;regla++) //las reglas se evaluan por orden
     {
-    if(transiciones[i].estadoInicial==estado)//Solo analizo las que tienen como estado inicial el indicado
+    if(transiciones[regla].estadoInicial==estado)//Solo analizo las que tienen como estado inicial el indicado
       {
-      if(debug) Serial.printf("Revisando regla %i\n",i);
+      if(debug) Serial.printf("Revisando regla %i\n",regla);
   
       boolean coinciden=true;  
-      for(uint8_t j=0;j<numeroEntradas;j++) 
+      for(uint8_t entrada=0;entrada<numeroEntradas;entrada++) 
         {
-        if (transiciones[i].valorEntradas[j]!=NO_CONFIGURADO) coinciden=coinciden &&(entradasActual[j]==transiciones[i].valorEntradas[j]);
-        if(debug) Serial.printf("Revisando entradas %i de regla %i (actual: %i vs regla: %i). Resultado %i\n",i,j,entradasActual[j],transiciones[i].valorEntradas[j],coinciden);
+        if (transiciones[regla].valorEntradas[entrada]!=NO_CONFIGURADO) coinciden=coinciden &&(entradasActual[entrada]==transiciones[regla].valorEntradas[entrada]);
+        if(debug) Serial.printf("Revisando entradas %i de regla %i (valor actual: %i vs valor regla: %i). Resultado %i\n",entrada,regla,entradasActual[entrada],transiciones[regla].valorEntradas[entrada],coinciden);
         }
 
-      if(coinciden) return transiciones[i].estadoFinal;
+      if(coinciden) return transiciones[regla].estadoFinal;
       }
     }
   return ESTADO_ERROR;  //Si no coincide ninguna regla, pasa a estado error
@@ -298,7 +294,11 @@ uint8_t mueveMaquina(uint8_t estado, int8_t entradasActual[], boolean debug)
 int8_t actualizaSalidasMaquinaEstados(uint8_t estado)
   {
   int8_t retorno=1; //si todo va bien salidaMaquinaEstados devuelve 1, si hay error -1 
-  for(uint8_t i=0;i<numeroSalidas;i++) retorno *= salidaMaquinaEstados(mapeoSalidas[i], estados[estado].salidasAsociadas[i]);
+  //Serial.printf("Estado: %s\n",estados[estado].nombre);
+  for(uint8_t i=0;i<numeroSalidas;i++) 
+    {
+    if(salidaMaquinaEstados(mapeoSalidas[i], estados[estado].valorSalidas[i])==NO_CONFIGURADO) retorno=0;
+    }
 
   return retorno;
   }
@@ -311,3 +311,22 @@ uint8_t getNumEstados(void){return numeroEstados;}
 uint8_t getNumTransiciones(void){return numeroTransiciones;}
 uint8_t getNumEntradasME(void){return numeroEntradas;}
 uint8_t getNumSalidasME(void){return numeroSalidas;}
+
+uint8_t getNumEntradaME(uint8_t entrada)
+  {
+  if(entrada>numeroEntradas) return -1;
+  return mapeoEntradas[entrada];
+  }
+  
+uint8_t getNumSalidaME(uint8_t salida)
+  {
+  if(salida>numeroSalidas) return -1;
+  return mapeoSalidas[salida];
+  }
+
+int8_t getEstadoInicialTransicion(int8_t transicion) {return transiciones[transicion].estadoInicial;}
+int8_t getEstadoFinalTransicion(int8_t transicion) {return transiciones[transicion].estadoFinal;}
+int8_t getValorEntradaTransicion(int8_t transicion, int8_t entrada) {return transiciones[transicion].valorEntradas[entrada];}
+
+String getNombreEstado(uint8_t estado){return estados[estado].nombre;}
+String getNombreEstadoActual(void){return getNombreEstado(estadoActual);}

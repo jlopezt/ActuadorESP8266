@@ -11,7 +11,7 @@
 /***************************** Defines *****************************/
 //Defines generales
 #define NOMBRE_FAMILIA   "Actuador/Secuenciador (E/S)"
-#define VERSION          "4.3.0 (ESP8266v2.4.2 OTA|MQTT|Logic+|Secuenciador|eventos SNTP|Alineado ESP32)"
+#define VERSION          "4.3.1 (ESP8266v2.4.2 OTA|MQTT|Logic+|Secuenciador|eventos SNTP|Alineado ESP32)"
 #define SEPARADOR        '|'
 #define SUBSEPARADOR     '#'
 #define KO               -1
@@ -20,6 +20,7 @@
 
 //Ficheros de configuracion
 #define FICHERO_CANDADO                  "/Candado"
+#define FICHERO_ERRORES                  "/Errores.log"
 #define GLOBAL_CONFIG_FILE               "/Config.json"
 #define GLOBAL_CONFIG_BAK_FILE           "/Config.json.bak"
 #define ENTRADAS_CONFIG_FILE             "/EntradasConfig.json"
@@ -52,18 +53,13 @@
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
-//#include <FS.h>     //this needs to be first, or it all crashes and burns...
-//#include <TimeLib.h>  // download from: http://www.arduino.cc/playground/Code/Time
-//#include <WiFiUdp.h>
-#include <ESP8266WiFi.h>
-#include <ESP8266mDNS.h>
 #include <ArduinoOTA.h>
 #include <ArduinoJson.h>
 /***************************** Includes *****************************/
 
 /***************************** variables globales *****************************/
 //Indica si el rele se activa con HIGH o LOW
-int nivelActivo=HIGH; //Se activa con HIGH por defecto
+int nivelActivo;
 
 String nombre_dispositivo;//(NOMBRE_FAMILIA);//Nombre del dispositivo, por defecto el de la familia
 uint16_t vuelta = MAX_VUELTAS-100;//0; //vueltas de loop
@@ -149,6 +145,8 @@ void setup()
   //Si ha llegado hasta aqui, todo ha ido bien y borro el candado
   if(borraFichero(FICHERO_CANDADO))Serial.println("Candado borrado");
   else Serial.println("ERROR - No se pudo borrar el candado");
+  
+  compruebaConfiguracion(0);
   
   Serial.printf("\n\n");
   Serial.println("***************************************************************");

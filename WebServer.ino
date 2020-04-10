@@ -58,9 +58,7 @@ void inicializaWebServer(void)
   server.on("/edit.html",  HTTP_POST, []() {  // If a POST request is sent to the /edit.html address,
                                            server.send(200, "text/plain", ""); 
                                            }, handleFileUpload);                       // go to 'handleFileUpload'
-  server.on("/speech", handleSpeechPath);
-  server.on("/habla", handleHablaPath);
-  
+
   server.onNotFound(handleNotFound);//pagina no encontrada
 
   server.begin();
@@ -93,13 +91,13 @@ void handleRoot()
 
   //genero la respuesta por defecto
   cad += cabeceraHTML;
+
   //Entradas  
   cad += "<TABLE style=\"border: 2px solid black\">\n";
   cad += "<CAPTION>Entradas</CAPTION>\n";  
   for(int8_t i=0;i<MAX_ENTRADAS;i++)
     {
-    //if(entradas[i].configurada==CONFIGURADO) cad += "<TR><TD>" + entradas[i].nombre + "-></TD><TD>" + String(entradas[i].estado) + "</TD></TR>\n";
-    if(entradas[i].configurada==CONFIGURADO) cad += "<TR><TD>" + entradas[i].nombre + "-></TD><TD>" + String(entradas[i].nombreEstados[entradas[i].estado]) + "</TD></TR>\n";
+    if(entradaConfigurada(i)==CONFIGURADO) cad += "<TR><TD>" + nombreEntrada(i) + "-></TD><TD>" + String(nombreEstadoEntrada(i,estadoEntrada(i))) + "</TD></TR>\n";    
     }
   cad += "</TABLE>\n";
   cad += "<BR>";
@@ -113,27 +111,9 @@ void handleRoot()
       {      
       cad += "<TR>\n";
       cad += "<TD>" + nombreRele(i) + "-></TD><TD>" + String(estadoRele(i)) + "</TD>";            
-/*Se sustituye por el bloque siguiente
-      //compruebo si esta asociada a un plan de secuenciador
-      if(asociadaASecuenciador(i)!=NO_CONFIGURADO && estadoSecuenciador())//Si esa asociada a un secuenciador o el secuenciador esta on
-        {
-        cad += "<TD colspan=2> | Secuenciador " + String(asociadaASecuenciador(i)) + "</TD>";
-        }
-      else if(salidaSeguimiento(i)!=NO_CONFIGURADO)
-        {
-        cad += "<TD>Siguiendo a entrada " + String(salidaSeguimiento(i)) + "</TD>";
-        }
-      else      
-        {
-        //Enlace para activar o desactivar
-        if (estadoRele(i)==1) orden="desactiva"; else orden="activa";//para 0 y 2 (apagado y en pulso) activa
-        cad += "<TD><a href=\"" + orden + "Rele\?id=" + String(i) + "\" target=\"_self\">" + orden + " rele</a></TD>\n";  
-        //Enlace para generar un pulso
-        cad += "<TD><a href=\"pulsoRele\?id=" + String(i) + "\" target=\"_self\">Pulso</a></TD>\n";
-        }
-  */
+
         //acciones en funcion del modo
-        switch (getModoSalida(i))          
+        switch (modoSalida(i))          
           {
           case MODO_MANUAL:
             //Enlace para activar o desactivar
@@ -143,13 +123,16 @@ void handleRoot()
             cad += "<TD><a href=\"pulsoRele\?id=" + String(i) + "\" target=\"_self\">Pulso</a></TD>\n";
             break;
           case MODO_SECUENCIADOR:
-            cad += "<TD colspan=2> | Secuenciador " + String(asociadaASecuenciador(i)) + "</TD>";
+          cad += "<TD colspan=2> | Secuenciador " + String(controladorSalida(i)) + "</TD>";
             break;
           case MODO_SEGUIMIENTO:
             cad += "<TD>Siguiendo a entrada " + String(salidaSeguimiento(i)) + "</TD>";
             break;
-          default://Salida no configurada
-            cad += "<TD>¿?>/TD>";  
+        case MODO_MAQUINA:
+          cad += "<TD>Controlado por la logica de la maquina de estados. Estado actual: " + getNombreEstadoActual() + "</TD>";
+          break;            
+        default://Salida no configurada
+          cad += "<TD>No configurada</TD>";  
           }
 
       cad += "</TR>\n";        
@@ -176,8 +159,18 @@ void handleRoot()
   //Enlaces
   cad += "<BR><BR>\n";
   cad += enlaces;
+
+  cad += "<BR><BR>";
+  String contenido="";
+  leeFichero(FICHERO_ERRORES, contenido);
+  cad += "Comprobacion de la configuracion:<BR>";
+  cad += "<textarea readonly=true cols=100 rows=16 name=\"contenido\">";
+  cad += contenido;
+  cad += "</textarea>";
+  
   cad += "<BR><BR>" + nombre_dispositivo + " . Version " + String(VERSION) + ".";
 
+  cad += pieHTML;
   server.send(200, "text/html", cad);
   }
 
@@ -195,14 +188,55 @@ void handleMaquinaEstados(void)
   //genero la respuesta por defecto
   cad += cabeceraHTML;
 
-  //Estados
+  //Estado actual
+  cad += "Estado actual: " + getNombreEstadoActual();
+  cad += "<BR><BR>";
+  
+  //Entradas
   cad += "<TABLE style=\"border: 2px solid black\">\n";
-  cad += "<CAPTION>ESTADOS</CAPTION>\n";  
-
+  cad += "<CAPTION>Entradas actual</CAPTION>\n";  
   cad += "<TR>"; 
   cad += "<TD>id</TD>";  
   cad += "<TD>Nombre</TD>";
-  for(uint8_t i=0;i<getNumSalidasME();i++) cad += "<TD>Salida " + String(i) + "</TD>";
+  cad += "<TD>Ultimo estado leido</TD>";
+  cad += "</TR>";    
+  for(uint8_t i=0;i<getNumEntradasME();i++)
+    {
+    cad += "<TR>";  
+    cad += "<TD>" + String(i) + ":" + String(mapeoEntradas[i]) + "</TD>";  
+    cad += "<TD>" + nombreEntrada(mapeoEntradas[i])+ "</TD>";
+    cad += "<TD>" + String(entradasActual[i]) + ":" + String(estadoEntrada(mapeoEntradas[i])) + "</TD>";
+    cad += "</TR>";
+    }
+  cad += "</TABLE>";
+  cad += "<BR><BR>";
+  
+  //Salidas
+  cad += "<TABLE style=\"border: 2px solid black\">\n";
+  cad += "<CAPTION>Salidas actual</CAPTION>\n";  
+  cad += "<TR>"; 
+  cad += "<TD>id</TD>";  
+  cad += "<TD>Nombre</TD>";
+  cad += "<TD>Estado actual</TD>";
+  cad += "</TR>";    
+  for(uint8_t i=0;i<getNumSalidasME();i++)
+    {
+    cad += "<TR>";  
+    cad += "<TD>" + String(i) + ":" + String(mapeoSalidas[i]) + "</TD>";  
+    cad += "<TD>" + String(nombreSalida(mapeoSalidas[i])) + "</TD>";
+    cad += "<TD>" + String(estadoRele(mapeoSalidas[i])) + "</TD>";
+    cad += "</TR>";
+    }
+  cad += "</TABLE>";
+  cad += "<BR><BR>";
+  
+  //Estados  
+  cad += "<TABLE style=\"border: 2px solid black\">\n";
+  cad += "<CAPTION>ESTADOS</CAPTION>\n";  
+  cad += "<TR>"; 
+  cad += "<TD>id</TD>";  
+  cad += "<TD>Nombre</TD>";
+  for(uint8_t i=0;i<getNumSalidasME();i++) cad += "<TD>Salida[" + String(i) + "] salida asociada(" + mapeoSalidas[i] + ")</TD>";
   cad += "</TR>"; 
     
   for(uint8_t i=0;i<getNumEstados();i++)
@@ -210,11 +244,10 @@ void handleMaquinaEstados(void)
     cad += "<TR>";  
     cad += "<TD>" + String(i) + "</TD>";  
     cad += "<TD>" + estados[i].nombre + "</TD>";
-    for(uint8_t j=0;j<getNumSalidasME();j++) cad += "<TD>" + String(estados[i].salidasAsociadas[j]) + "</TD>";
+    for(uint8_t j=0;j<getNumSalidasME();j++) cad += "<TD>" + String(estados[i].valorSalidas[j]) + "</TD>";
     cad += "</TR>";
     }
   cad += "</TABLE>";
-
   cad += "<BR><BR>";
   
   //Transiciones
@@ -236,7 +269,9 @@ void handleMaquinaEstados(void)
     cad += "</TR>";
     }
   cad += "</TABLE>";
-
+  cad += "<BR><BR>";
+  
+  cad += pieHTML;
   server.send(200, "text/html", cad);
   }
 
@@ -262,9 +297,55 @@ void handleEstado(void)
 /***************************************************/  
 void handleEstadoSalidas(void)
   {
-  String cad=generaJsonEstadoSalidas();
+  String cad="";
+
+  //genero la respuesta por defecto
+  cad += cabeceraHTML;
+
+  //Estados
+  cad += "<TABLE style=\"border: 2px solid black\">\n";
+  cad += "<CAPTION>Salidas</CAPTION>\n";  
+
+  cad += "<TR>"; 
+  cad += "<TD>id</TD>";  
+  cad += "<TD>Nombre</TD>";
+  cad += "<TD>Configurada</TD>";
+  cad += "<TD>Pin</TD>";  
+  cad += "<TD>Controlador</TD>";  
+  cad += "<TD>Modo</TD>";  
+  cad += "<TD>Ancho del pulso</TD>";  
+  cad += "<TD>Inicio del pulso</TD>";  
+  cad += "<TD>Fin del pulso</TD>";  
+  cad += "<TD>Estado</TD>";
+  cad += "<TD>Nombre del estado</TD>";
+  cad += "<TD>mensaje</TD>";
+  cad += "</TR>"; 
+
+  for(uint8_t salida=0;salida<MAX_SALIDAS;salida++)
+    {
+    cad += "<TR>"; 
+    cad += "<TD>" + String(salida) + "</TD>";
+    cad += "<TD>" + String(nombreSalida(salida)) + "</TD>";  
+    cad += "<TD>" + String(releConfigurado(salida)) + "</TD>";
+    cad += "<TD>" + String(pinSalida(salida)) + "</TD>";
+    cad += "<TD>" + String(controladorSalida(salida)) + "</TD>";
+    cad += "<TD>" + String(modoSalida(salida)) + "</TD>";
+    cad += "<TD>" + String(anchoPulsoSalida(salida)) + "</TD>";
+    cad += "<TD>" + String(inicioSalida(salida)) + "</TD>";
+    cad += "<TD>" + String(finPulsoSalida(salida)) + "</TD>";
+    cad += "<TD>" + String(estadoRele(salida)) + "</TD>";
+    cad += "<TD>" + String(nombreEstadoSalida(salida,estadoRele(salida))) + "</TD>";
+    cad += "<TD>" + String(mensajeEstadoSalida(salida,estadoRele(salida))) + "</TD>";
+    cad += "</TR>";     
+    }
+  cad += "</TABLE>";
+
+  cad += pieHTML;
+  server.send(200, "text/HTML", cad);     
+
+  //String cad=generaJsonEstadoSalidas();
   
-  server.send(200, "text/json", cad); 
+  //server.send(200, "text/json", cad); 
   }
   
 /*****************************************************/
@@ -275,9 +356,50 @@ void handleEstadoSalidas(void)
 /*****************************************************/  
 void handleEstadoEntradas(void)
   {
-  String cad=generaJsonEstadoEntradas();
+  String cad="";
+
+  //genero la respuesta por defecto
+  cad += cabeceraHTML;
+
+  //Estados
+  cad += "<TABLE style=\"border: 2px solid black\">\n";
+  cad += "<CAPTION>Entradas</CAPTION>\n";  
+
+  cad += "<TR>"; 
+  cad += "<TD>id</TD>";  
+  cad += "<TD>Nombre</TD>";
+  cad += "<TD>Configurada</TD>";
+  cad += "<TD>Tipo</TD>";
+  cad += "<TD>Pin</TD>";
+  cad += "<TD>Estado activo</TD>";
+  cad += "<TD>Estado fisico</TD>";
+  cad += "<TD>Estado</TD>";
+  cad += "<TD>Nombre del estado</TD>";
+  cad += "<TD>mensaje</TD>";
+  cad += "</TR>"; 
+
+  for(uint8_t entrada=0;entrada<MAX_ENTRADAS;entrada++)
+    {
+    cad += "<TR>"; 
+    cad += "<TD>" + String(entrada) + "</TD>";
+    cad += "<TD>" + String(nombreEntrada(entrada)) + "</TD>";  
+    cad += "<TD>" + String(entradaConfigurada(entrada)) + "</TD>";
+    cad += "<TD>" + String(tipoEntrada(entrada)) + "</TD>";
+    cad += "<TD>" + String(pinEntrada(entrada)) + "</TD>";
+    cad += "<TD>" + String(estadoActivoEntrada(entrada)) + "</TD>";
+    cad += "<TD>" + String(estadoFisicoEntrada(entrada)) + "</TD>";    
+    cad += "<TD>" + String(estadoEntrada(entrada)) + "</TD>";
+    cad += "<TD>" + String(nombreEstadoEntrada(entrada,estadoEntrada(entrada))) + "</TD>";
+    cad += "<TD>" + String(mensajeEstadoEntrada(entrada,estadoEntrada(entrada))) + "</TD>";
+     cad += "</TR>";     
+    }
+  cad += "</TABLE>";
+
+  cad += pieHTML;
+  server.send(200, "text/HTML", cad); 
+  //String cad=generaJsonEstadoEntradas();
   
-  server.send(200, "text/json", cad); 
+  //server.send(200, "text/json", cad); 
   }
   
 /*********************************************/
@@ -294,7 +416,7 @@ void handleActivaRele(void)
     int8_t id=server.arg("id").toInt();
 
     //activaRele(id);
-    conmutaRele(id, nivelActivo, debugGlobal);
+    conmutaRele(id, ESTADO_ACTIVO, debugGlobal);
 
     handleRoot();
     }
@@ -315,7 +437,7 @@ void handleDesactivaRele(void)
     int8_t id=server.arg("id").toInt();
 
     //desactivaRele(id);
-    conmutaRele(id, !nivelActivo, debugGlobal);
+    conmutaRele(id, ESTADO_DESACTIVO, debugGlobal);
     
     handleRoot();
     }
@@ -388,7 +510,6 @@ void handlePlanes(void)
     }
   
   cad += pieHTML;
-    
   server.send(200, "text/html", cad); 
   
   }
@@ -425,10 +546,8 @@ void handleTest(void)
   String cad="";
 
   cad += cabeceraHTML;
-  
   cad += "Test OK<br>";
   cad += pieHTML;
-    
   server.send(200, "text/html", cad); 
   }
 
@@ -463,10 +582,8 @@ void handleRestart(void)
   String cad="";
 
   cad += cabeceraHTML;
-  
   cad += "Reiniciando...<br>";
   cad += pieHTML;
-    
   server.send(200, "text/html", cad);     
   delay(100);
   ESP.restart();
@@ -791,7 +908,7 @@ void handleManageFichero(void)
       cad += contenido.length();
       cad += " bytes.<BR>";
       cad += "El contenido del fichero es:<BR>";
-      cad += "<textarea readonly=true cols=75 rows=20 name=\"contenido\">";
+      cad += "<textarea readonly=true cols=100 rows=20 name=\"contenido\">";
       cad += contenido;
       cad += "</textarea>";
       cad += "<BR>";
@@ -809,7 +926,7 @@ void handleManageFichero(void)
       cad += "<form action=\"creaFichero\" target=\"_self\">";
       cad += "  <p>";
       cad += "    <input type=\"hidden\" name=\"nombre\" value=\"" + nombreFichero + "\">";
-      cad += "    contenido del fichero: <br><textarea cols=75 rows=20 name=\"contenido\">" + contenido + "</textarea>";
+      cad += "    contenido del fichero: <br><textarea cols=100 rows=20 name=\"contenido\">" + contenido + "</textarea>";
       cad += "    <BR>";
       cad += "    <input type=\"submit\" value=\"salvar\">";
       cad += "  </p>";
@@ -967,26 +1084,3 @@ void handleFileUpload()
       }
     }
   }
-
-/****************************Google Home Notifier ******************************/
-void handleSpeechPath() {
-  String phrase = server.arg("phrase");
-  if (phrase == "") {
-    server.send(401, "text / plain", "query 'phrase' is not found");
-    return;
-  }
-  
-
-  /*
-  if (ghn.notify(phrase.c_str()) != true) {
-    Serial.println(ghn.getLastError());
-    server.send(500, "text / plain", ghn.getLastError());
-    return;
-  }*/
-  if(enviaNotificacion((char*)phrase.c_str())) server.send(200, "text / plain", "OK");
-  else server.send(404, "text / plain", "KO");  
-}
-
-void handleHablaPath() {
-  server.send(200, "text/html", "<html><head></head><body><input type=\"text\"><button>speech</button><script>var d = document;d.querySelector('button').addEventListener('click',function(){xhr = new XMLHttpRequest();xhr.open('GET','/speech?phrase='+encodeURIComponent(d.querySelector('input').value));xhr.send();});</script></body></html>");
-}  
