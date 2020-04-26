@@ -7,7 +7,8 @@
 //Definicion de pines
 #define MAX_PINES        20 //numero de pines disponibles para entradas y salidas
 #define MAX_ENTRADAS     10 //numero maximo de reles soportado
-#define MAX_SALIDAS        MAX_PINES-MAX_ENTRADAS //numero maximo de salidas
+#define MAX_SALIDAS      MAX_PINES-MAX_ENTRADAS //numero maximo de salidas
+#define GPIOS_DIGITALES  9
 
 #ifndef NO_CONFIGURADO 
 #define NO_CONFIGURADO -1
@@ -51,6 +52,7 @@ typedef struct{
   String nombre;            //nombre configurado para el rele
   int8_t estado;            //1 activo, 0 no activo (respecto a nivelActivo), modo pulso y modo maquina
   int8_t modo;              //0: manual, 1: secuanciador, 2: seguimiento
+  int8_t modo_inicial;      //Modo incial, cuando se fuerza a manual este no cambia y cuando vuelve, se recupera de aqui  
   int8_t pin;               // Pin al que esta conectado el rele
   int16_t anchoPulso;       // Ancho en milisegundos del pulso para esa salida
   int8_t controlador;       //1 si esta asociado a un secuenciador que controla la salida, 0 si no esta asociado
@@ -63,7 +65,7 @@ salida_t salidas[MAX_SALIDAS];
 
 //Variables comunes a E&S
 //tabla de pines GPIOs
-int8_t pinGPIOS[9]={16,5,4,0,2,14,12,13,15}; //tiene 9 puertos digitales, el indice es el puerto Dx y el valor el GPIO
+int8_t pinGPIOS[GPIOS_DIGITALES]={16,5,4,0,2,14,12,13,15}; //tiene 9 puertos digitales, el indice es el puerto Dx y el valor el GPIO
 
 /************************************** Funciones de configuracion ****************************************/
 /*********************************************/
@@ -124,6 +126,7 @@ void inicializaSalidas(void)
     salidas[i].nombre="No configurado";
     salidas[i].estado=NO_CONFIGURADO;
     salidas[i].modo=NO_CONFIGURADO;
+    salidas[i].modo_inicial=NO_CONFIGURADO;
     salidas[i].pin=-1;
     salidas[i].anchoPulso=0;
     salidas[i].controlador=NO_CONFIGURADO;
@@ -134,7 +137,7 @@ void inicializaSalidas(void)
     salidas[i].mensajes[0]="";
     salidas[i].mensajes[1]="";
     }
-         
+ 
   //leo la configuracion del fichero
   if(!recuperaDatosSalidas(debugGlobal)) Serial.println("Configuracion de los reles por defecto");
   else
@@ -146,6 +149,9 @@ void inicializaSalidas(void)
         {   
         pinMode(pinGPIOS[salidas[i].pin], OUTPUT); //es salida
 
+        //Guardo el modo para recuperarlo si se pasa a manual
+        salidas[i].modo_inicial=salidas[i].modo;
+        
         //parte logica
         salidas[i].estado=salidas[i].inicio;  
         //parte fisica
@@ -471,7 +477,7 @@ int8_t conmutaRele(int8_t id, int8_t estado_final, int debug)
   salidas[id].estado=estado_final;//Lo que llega es el estado logico. No hace falta mapeo
   
   //parte fisica. Me he hecho un mapa de karnaugh y sale asi
-  if(estado_final==nivelActivo) digitalWrite(salidas[id].pin, HIGH); //controlo el rele
+  if(estado_final==nivelActivo) digitalWrite(pinGPIOS[salidas[id].pin], HIGH); //controlo el rele
   else digitalWrite(pinGPIOS[salidas[id].pin], LOW); //controlo el rele
   
   if(debug)
@@ -592,6 +598,38 @@ void asociarSecuenciador(int8_t id, int8_t plan)
 
 /********************************************************/
 /*                                                      */
+/*     Fuerza el modo manual en una salida que esta en  */
+/*     en otro modo                                     */
+/*                                                      */
+/********************************************************/ 
+int8_t forzarModoManualSalida(int8_t id)
+  {
+  //validaciones previas
+  if(id <0 || id>=MAX_SALIDAS) return NO_CONFIGURADO;
+
+  salidas[id].modo=MODO_MANUAL;
+
+  return CONFIGURADO;
+  }
+
+/********************************************************/
+/*                                                      */
+/*     Fuerza el modo manual en una salida que esta en  */
+/*     en otro modo                                     */
+/*                                                      */
+/********************************************************/ 
+int8_t recuperarModoSalida(int8_t id)
+  {
+  //validaciones previas
+  if(id <0 || id>=MAX_SALIDAS) return NO_CONFIGURADO;
+
+  salidas[id].modo=salidas[id].modo_inicial;
+  conmutaRele(id, ESTADO_DESACTIVO, debugGlobal);
+  return CONFIGURADO;
+  }  
+
+/********************************************************/
+/*                                                      */
 /*     Devuelve el nombre de la salida                  */
 /*                                                      */
 /********************************************************/ 
@@ -634,7 +672,7 @@ uint16_t anchoPulsoSalida(uint8_t id)
 /*     Devuelve el fin del pulso de la salida           */
 /*                                                      */
 /********************************************************/ 
-uint16_t finPulsoSalida(uint8_t id)
+unsigned long finPulsoSalida(uint8_t id)
   {
   //validaciones previas
   if(id <0 || id>=MAX_SALIDAS) return NO_CONFIGURADO;
@@ -693,22 +731,7 @@ int8_t controladorSalida(int8_t id)
   {
   //validaciones previas
   if(id <0 || id>=MAX_SALIDAS) return NO_CONFIGURADO;
-  if(salidas[id].modo!=MODO_SECUENCIADOR) return NO_CONFIGURADO;
-       
-  return salidas[id].controlador;  
-  }   
-
-/********************************************************/
-/*                                                      */
-/*     Devuelve si la salida esta asociada              */
-/*     a una entrda en modo seguimeinto (id entrda)     */
-/*                                                      */
-/********************************************************/ 
-int8_t salidaSeguimiento(int8_t id)
-  {
-  //validaciones previas
-  if(id <0 || id>=MAX_SALIDAS) return NO_CONFIGURADO;
-  if(salidas[id].modo!=MODO_SEGUIMIENTO) return NO_CONFIGURADO;
+  if(salidas[id].modo!=MODO_SECUENCIADOR && salidas[id].modo!=MODO_SEGUIMIENTO) return NO_CONFIGURADO;
        
   return salidas[id].controlador;  
   }   
@@ -724,6 +747,19 @@ uint8_t modoSalida(uint8_t id)
   if(id <0 || id>=MAX_SALIDAS) return NO_CONFIGURADO;
        
   return salidas[id].modo;  
+  }   
+
+/********************************************************/
+/*                                                      */
+/*     Devuelve el modo inicial de la salida            */
+/*                                                      */
+/********************************************************/ 
+uint8_t modoInicalSalida(uint8_t id)
+  {
+  //validaciones previas
+  if(id <0 || id>=MAX_SALIDAS) return NO_CONFIGURADO;
+       
+  return salidas[id].modo_inicial;  
   }   
 
 /********************************************************** Fin salidas ******************************************************************/  

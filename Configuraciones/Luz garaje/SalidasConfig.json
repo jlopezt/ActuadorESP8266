@@ -1,0 +1,18 @@
+{
+  "Salidas": [
+    {
+    "Dx": 23, 
+    "nombre": "Luz",
+    "inicio": "off",
+    "anchoPulso": 0,
+    "modo": 3,
+    "controlador": 0,
+    "Estados": [
+      {"valor": 0, "texto": "Encendido"},
+      {"valor": 1, "texto": "Apagado"}
+      ],
+    "Mensajes": [
+      {"valor": 0, "texto": "Encendido"},
+      {"valor": 1, "texto": "Apagado"}
+      ]
+    }

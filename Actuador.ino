@@ -39,17 +39,18 @@
 #define MAQUINAESTADOS_CONFIG_BAK_FILE   "/MaqEstadosConfig.json.bak"
 
 // Una vuela de loop son ANCHO_INTERVALO segundos 
-#define ANCHO_INTERVALO         100 //Ancho en milisegundos de la rodaja de tiempo
-#define FRECUENCIA_OTA            5 //cada cuantas vueltas de loop atiende las acciones
-#define FRECUENCIA_ENTRADAS       5 //cada cuantas vueltas de loop atiende las entradas
-#define FRECUENCIA_SALIDAS        5 //cada cuantas vueltas de loop atiende las salidas
-#define FRECUENCIA_SECUENCIADOR  10 //cada cuantas vueltas de loop atiende al secuenciador
-#define FRECUENCIA_MAQUINAESTADOS 10 //cada cuantas vueltas de loop atiende a la maquina de estados
-#define FRECUENCIA_SERVIDOR_WEB   1 //cada cuantas vueltas de loop atiende el servidor web
-#define FRECUENCIA_MQTT          10 //cada cuantas vueltas de loop envia y lee del broker MQTT
-#define FRECUENCIA_ENVIO_DATOS  100 //cada cuantas vueltas de loop envia al broker el estado de E/S
-#define FRECUENCIA_ORDENES        2 //cada cuantas vueltas de loop atiende las ordenes via serie 
-#define FRECUENCIA_SNTP         100 //cada cuantas vueltas de loop atiende los eventos SNTP recibidos
+#define ANCHO_INTERVALO           100 //Ancho en milisegundos de la rodaja de tiempo
+#define FRECUENCIA_OTA              5 //cada cuantas vueltas de loop atiende las acciones
+#define FRECUENCIA_ENTRADAS         5 //cada cuantas vueltas de loop atiende las entradas
+#define FRECUENCIA_SALIDAS          5 //cada cuantas vueltas de loop atiende las salidas
+#define FRECUENCIA_SECUENCIADOR    10 //cada cuantas vueltas de loop atiende al secuenciador
+#define FRECUENCIA_MAQUINAESTADOS  10 //cada cuantas vueltas de loop atiende a la maquina de estados
+#define FRECUENCIA_SERVIDOR_WEB    1 //cada cuantas vueltas de loop atiende el servidor web
+#define FRECUENCIA_MQTT           10 //cada cuantas vueltas de loop envia y lee del broker MQTT
+#define FRECUENCIA_ENVIO_DATOS   100 //cada cuantas vueltas de loop envia al broker el estado de E/S
+#define FRECUENCIA_ORDENES         2 //cada cuantas vueltas de loop atiende las ordenes via serie 
+#define FRECUENCIA_SNTP          100 //cada cuantas vueltas de loop atiende los eventos SNTP recibidos
+#define FRECUENCIA_WIFI_WATCHDOG 100 //cada cuantas vueltas comprueba si se ha perdido la conexion WiFi
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
@@ -62,7 +63,7 @@
 int nivelActivo;
 
 String nombre_dispositivo;//(NOMBRE_FAMILIA);//Nombre del dispositivo, por defecto el de la familia
-uint16_t vuelta = MAX_VUELTAS-100;//0; //vueltas de loop
+uint16_t vuelta = 0;//MAX_VUELTAS-100; //vueltas de loop
 int debugGlobal=0; //por defecto desabilitado
 boolean candado=false; //Candado de configuracion. true implica que la ultima configuracion fue mal
 /***************************** variables globales *****************************/
@@ -155,6 +156,9 @@ void setup()
   Serial.println("*                                                             *");    
   Serial.println("***************************************************************");
   Serial.printf("\n\n");  
+
+  //activo el watchdog
+  ESP.wdtEnable(1);  
   }  
 
 void loop()
@@ -163,6 +167,9 @@ void loop()
   time_t EntradaBucle=0;
   EntradaBucle=millis();//Hora de entrada en la rodaja de tiempo
 
+  //reinicio el watchdog del sistema
+  ESP.wdtFeed();
+  
   //------------- EJECUCION DE TAREAS --------------------------------------
   //Acciones a realizar en el bucle   
   //Prioridad 0: OTA es prioritario.
@@ -178,6 +185,8 @@ void loop()
   if ((vuelta % FRECUENCIA_MQTT)==0) atiendeMQTT();      
   if ((vuelta % FRECUENCIA_ENVIO_DATOS)==0) enviaDatos(debugGlobal); //publica via MQTT los datos de entradas y salidas, segun configuracion
   if ((vuelta % FRECUENCIA_ORDENES)==0) while(HayOrdenes(debugGlobal)) EjecutaOrdenes(debugGlobal); //Lee ordenes via serie
+  //Prioridad 4: WatchDog
+  if ((vuelta % FRECUENCIA_WIFI_WATCHDOG)==0) WifiWD();    
   //------------- FIN EJECUCION DE TAREAS ---------------------------------  
 
   //sumo una vuelta de loop, si desborda inicializo vueltas a cero
@@ -281,3 +290,5 @@ String generaJsonConfiguracionNivelActivo(String configActual, int nivelAct)
 
   return salida;  
   }  
+
+  
