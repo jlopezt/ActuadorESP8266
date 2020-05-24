@@ -12,6 +12,12 @@ Informacion del Hw del sistema http://IP/info
 #define PUERTO_WEBSERVER 80
 #define ACTIVO    String("#EEEE00")
 #define DESACTIVO String("#AAAAAA")
+//#define ACTIVO    String("#EEEE00")
+//#define DESACTIVO String("#AAAAAA")
+#define FONDO     String("#DDDDDD")
+#define TEXTO     String("#000000")
+#define ACTIVO    String("#FFFF00")
+#define DESACTIVO String("#DDDDDD")
 
 //Includes
 #include <ESP8266WebServer.h>
@@ -21,7 +27,7 @@ ESP8266WebServer server(PUERTO_WEBSERVER);
 
 //Cadenas HTML precargadas
 String cabeceraHTML="";
-String enlaces="<TABLE>\n<CAPTION>Enlaces</CAPTION>\n<TR><TD><a href=\"info\" target=\"_self\">Info</a></TD></TR>\n<TR><TD><a href=\"test\" target=\"_self\">Test</a></TD></TR>\n<TR><TD><a href=\"restart\" target=\"_self\">Restart</a></TD></TR>\n<TR><TD><a href=\"listaFicheros\" target=\"_self\">Lista ficheros</a></TD></TR>\n<TR><TD><a href=\"estado\" target=\"_self\">Estado</a></TD></TR>\n<TR><TD><a href=\"estadoSalidas\" target=\"_self\">Estado salidas</a></TD></TR>\n<TR><TD><a href=\"estadoEntradas\" target=\"_self\">Estado entradas</a></TD></TR>\n<TR><TD><a href=\"planes\" target=\"_self\">Planes del secuenciador</a></TD></TR>\n<TR><TD><a href=\"maquinaEstados\" target=\"_self\">Maquina de estados</a></TD></TR></TABLE>\n"; 
+String enlaces="<TABLE>\n<CAPTION>Enlaces</CAPTION>\n<TR><TD><a href=\"info\" target=\"_self\">Info</a></TD></TR>\n<TR><TD><a href=\"test\" target=\"_self\">Test</a></TD></TR>\n<TR><TD><a href=\"restart\" target=\"_self\">Restart</a></TD></TR>\n<TR><TD><a href=\"listaFicheros\" target=\"_self\">Lista ficheros</a></TD></TR>\n<TR><TD><a href=\"estado\" target=\"_self\">Estado</a></TD></TR>\n<TR><TD><a href=\"configSalidas\" target=\"_self\">Configuracion salidas</a></TD></TR>\n<TR><TD><a href=\"configEntradas\" target=\"_self\">Configuracion entradas</a></TD></TR>\n<TR><TD><a href=\"planes\" target=\"_self\">Planes del secuenciador</a></TD></TR>\n<TR><TD><a href=\"maquinaEstados\" target=\"_self\">Maquina de estados</a></TD></TR></TABLE>\n"; 
 String pieHTML="</BODY></HTML>";
 
 /*********************************** Inicializacion y configuracion *****************************************************************/
@@ -35,8 +41,8 @@ void inicializaWebServer(void)
   //decalra las URIs a las que va a responder
   server.on("/", handleRoot); //Responde con la iodentificacion del modulo
   server.on("/estado", handleEstado); //Servicio de estdo de reles
-  server.on("/estadoSalidas", handleEstadoSalidas); //Servicio de estdo de reles
-  server.on("/estadoEntradas", handleEstadoEntradas); //Servicio de estdo de reles    
+  server.on("/configSalidas", handleEstadoSalidas); //Servicio de estdo de reles
+  server.on("/configEntradas", handleEstadoEntradas); //Servicio de estdo de reles    
   server.on("/activaRele", handleActivaRele); //Servicio de activacion de rele
   server.on("/desactivaRele", handleDesactivaRele);  //Servicio de desactivacion de rele
   server.on("/fuerzaManualSalida", handleFuerzaManual);  //Servicio para formar ua salida a modo manual
@@ -101,7 +107,14 @@ void handleRoot()
   cad += "<CAPTION>Entradas</CAPTION>\n";  
   for(int8_t i=0;i<MAX_ENTRADAS;i++)
     {
-    if(entradaConfigurada(i)==CONFIGURADO) cad += "<TR><TD>" + nombreEntrada(i) + "-></TD><TD>" + String(nombreEstadoEntrada(i,estadoEntrada(i))) + "</TD></TR>\n";    
+    if(entradaConfigurada(i)==CONFIGURADO) 
+      {
+      //cad += "<TR><TD>" + nombreEntrada(i) + "-></TD><TD>" + String(nombreEstadoEntrada(i,estadoEntrada(i))) + "</TD></TR>\n";    
+      cad += "<TR>";
+      cad += "<TD STYLE=\"color: " + TEXTO + "; text-align: center; background-color: " + FONDO + "\">" + nombreEntrada(i) + "</TD>";
+      cad += "<TD STYLE=\"color: " + TEXTO + "; text-align: center; background-color: " + String((estadoEntrada(i)==ESTADO_DESACTIVO?DESACTIVO:ACTIVO)) + "; width: 100px\">" + String(nombreEstadoEntrada(i,estadoEntrada(i))) + "</TD>";
+      cad += "</TR>";
+      }
     }
   cad += "</TABLE>\n";
   cad += "<BR>";
@@ -118,32 +131,10 @@ void handleRoot()
       else orden="activa";
 
       cad += "<TR>\n";
-      cad += "<TD>" + nombreRele(i) + "-></TD><TD>" + String(estadoRele(i)) + "</TD>";            
+      cad += "<TD STYLE=\"color: " + TEXTO + "; text-align: center; background-color: " + FONDO + "; width: 100px\">" + nombreRele(i) + "</TD>\n";
+      cad += "<TD STYLE=\"color: " + TEXTO + "; text-align: center; background-color: " + String((estadoRele(i)==ESTADO_DESACTIVO?DESACTIVO:ACTIVO)) + "; width: 100px\">" + nombreEstadoSalidaActual(i) + "</TD>\n";
 
         //acciones en funcion del modo
-/*        
-        switch (modoSalida(i))          
-          {
-          case MODO_MANUAL:
-            //Enlace para activar o desactivar
-            if (estadoRele(i)==1) orden="desactiva"; else orden="activa";//para 0 y 2 (apagado y en pulso) activa
-            cad += "<TD><a href=\"" + orden + "Rele\?id=" + String(i) + "\" target=\"_self\">" + orden + " rele</a></TD>\n";  
-            //Enlace para generar un pulso
-            cad += "<TD><a href=\"pulsoRele\?id=" + String(i) + "\" target=\"_self\">Pulso</a></TD>\n";
-            break;
-          case MODO_SECUENCIADOR:
-          cad += "<TD colspan=2> | Secuenciador " + String(controladorSalida(i)) + "</TD>";
-            break;
-          case MODO_SEGUIMIENTO:
-            cad += "<TD>Siguiendo a entrada " + String(controladorSalida(i)) + "</TD>";
-            break;
-        case MODO_MAQUINA:
-          cad += "<TD>Controlado por la logica de la maquina de estados. Estado actual: " + getNombreEstadoActual() + "</TD>";
-          break;            
-        default://Salida no configurada
-          cad += "<TD>No configurada</TD>";  
-          }
-*/          
       switch (modoSalida(i))          
         {
         case MODO_MANUAL:
@@ -152,17 +143,17 @@ void handleRoot()
           cad += "<td>\n";
           cad += "<form action=\"" + orden + "Rele\">\n";
           cad += "<input  type=\"hidden\" id=\"id\" name=\"id\" value=\"" + String(i) + "\" >\n";
-          cad += "<input STYLE=\"color: #000000; text-align: center; background-color: " + String((estadoRele(i)==ESTADO_DESACTIVO?ACTIVO:DESACTIVO)) + "; width: 80px\" type=\"submit\" value=\"" + orden + "r\">\n";
+          cad += "<input STYLE=\"color: " + TEXTO + "; text-align: center; background-color: " + String((estadoRele(i)==ESTADO_DESACTIVO?ACTIVO:DESACTIVO)) + "; width: 80px\" type=\"submit\" value=\"" + orden + "r\">\n";
           cad += "</form>\n";
           cad += "<form action=\"pulsoRele\">\n";
           cad += "<input  type=\"hidden\" id=\"id\" name=\"id\" value=\"" + String(i) + "\" >\n";
-          cad += "<input STYLE=\"color: #000000; text-align: center; background-color: " + ACTIVO + "; width: 80px\" type=\"submit\" value=\"pulso\">\n";
+          cad += "<input STYLE=\"color: " + TEXTO + "; text-align: center; background-color: " + ACTIVO + "; width: 80px\" type=\"submit\" value=\"pulso\">\n";
           cad += "</form>\n";
           if(modoInicalSalida(i)!=MODO_MANUAL)
             {
             cad += "<form action=\"recuperaManualSalida\">\n";
             cad += "<input  type=\"hidden\" id=\"id\" name=\"id\" value=\"" + String(i) + "\" >\n";
-            cad += "<input STYLE=\"color: #000000; text-align: center; background-color: " + ACTIVO + "; width: 160px\" type=\"submit\" value=\"recupera manual\">\n";
+            cad += "<input STYLE=\"color: " + TEXTO + "; text-align: center; background-color: " + ACTIVO + "; width: 160px\" type=\"submit\" value=\"recupera automatico\">\n";
             cad += "</form>\n";
             }
           cad += "</td>\n";    
@@ -175,7 +166,7 @@ void handleRoot()
           cad += "<td>\n";
           cad += "<form action=\"fuerzaManualSalida\">\n";
           cad += "<input  type=\"hidden\" id=\"id\" name=\"id\" value=\"" + String(i) + "\" >\n";
-          cad += "<input STYLE=\"color: #000000; text-align: center; background-color: " + ACTIVO + "; width: 160px\" type=\"submit\" value=\"fuerza manual\">\n";
+          cad += "<input STYLE=\"color: " + TEXTO + "; text-align: center; background-color: " + ACTIVO + "; width: 160px\" type=\"submit\" value=\"fuerza manual\">\n";
           cad += "</form>\n";
           cad += "</td>\n";    
           break;
@@ -185,7 +176,6 @@ void handleRoot()
         default://Salida no configurada
           cad += "<TD>No configurada</TD>\n";
         }
-        
       cad += "</TR>\n";        
       }
     }
@@ -210,15 +200,7 @@ void handleRoot()
   //Enlaces
   cad += "<BR><BR>\n";
   cad += enlaces;
-/*
-  cad += "<BR><BR>";
-  String contenido="";
-  leeFichero(FICHERO_ERRORES, contenido);
-  cad += "Comprobacion de la configuracion:<BR>";
-  cad += "<textarea readonly=true cols=100 rows=16 name=\"contenido\">";
-  cad += contenido;
-  cad += "</textarea>";
-  */
+
   cad += "<BR><BR>" + nombre_dispositivo + " . Version " + String(VERSION) + ".";
 
   cad += pieHTML;
@@ -363,7 +345,10 @@ void handleEstadoSalidas(void)
   cad += "<TD>Configurada</TD>";
   cad += "<TD>Pin</TD>";  
   cad += "<TD>Controlador</TD>";  
+  cad += "<TD>Inicio</TD>";  
   cad += "<TD>Modo</TD>";  
+  cad += "<TD>Tipo</TD>";  
+  cad += "<TD>valor PWM</TD>";    
   cad += "<TD>Ancho del pulso</TD>";  
   cad += "<TD>Inicio del pulso</TD>";  
   cad += "<TD>Fin del pulso</TD>";  
@@ -380,7 +365,10 @@ void handleEstadoSalidas(void)
     cad += "<TD>" + String(releConfigurado(salida)) + "</TD>";
     cad += "<TD>" + String(pinSalida(salida)) + "</TD>";
     cad += "<TD>" + String(controladorSalida(salida)) + "</TD>";
+    cad += "<TD>" + String(inicioSalida(salida)) + "</TD>";
     cad += "<TD>" + String(modoSalida(salida)) + "</TD>";
+    cad += "<TD>" + String(getTipo(salida)) + "</TD>";
+    cad += "<TD>" + String(getValorPWM(salida)) + "</TD>";
     cad += "<TD>" + String(anchoPulsoSalida(salida)) + "</TD>";
     cad += "<TD>" + String(inicioSalida(salida)) + "</TD>";
     cad += "<TD>" + String(finPulsoSalida(salida)) + "</TD>";
@@ -448,9 +436,6 @@ void handleEstadoEntradas(void)
 
   cad += pieHTML;
   server.send(200, "text/HTML", cad); 
-  //String cad=generaJsonEstadoEntradas();
-  
-  //server.send(200, "text/json", cad); 
   }
   
 /*********************************************/
@@ -574,32 +559,7 @@ void handlePlanes(void)
   
   for(int8_t i=0;i<numPlanes;i++)
     {
-    //cad += pintaPlanHTML(i);
-/******************************************************************/
-  cad += "<TABLE style=\"border: 2px solid black\">\n";
-  cad += "<CAPTION>Plan " + String(i) + "</CAPTION>\n";  
-
-  //Cabecera
-  cad += "<tr>";
-  cad += "<th>Hora</th>";
-  for(int8_t i=0;i<HORAS_EN_DIA;i++) cad += "<th style=\"width:40px\">" + String(i) + "</th>";
-  cad += "</tr>";
-
-  //Cada fila es un intervalo, cada columna un hora
-  int mascara=1;  
-  
-  for(int8_t intervalo=0;intervalo<12;intervalo++)
-    {
-    //Serial.printf("intervalo: %i | cad: %i\n",intervalo,cad.length());  
-    cad += "<tr>";
-    cad += "<td>" + String(intervalo) + ": (" + String(intervalo*5) + "-" + String(intervalo*5+4) + ")</td>";    
-    for(int8_t k=0;k<HORAS_EN_DIA;k++) cad += "<td style=\"text-align:center;\">" + (planes[i].horas[k] & mascara?String(1):String(0)) + "</td>";
-    cad += "</tr>";
-    
-    mascara<<=1;
-    }  
-/******************************************************************/
-   
+    cad += pintaPlanHTML(i);
     cad += "<BR><BR>";
     }
   
@@ -824,7 +784,12 @@ void handleCreaFichero(void)
     nombreFichero=server.arg("nombre");
     contenidoFichero=server.arg("contenido");
 
-    if(salvaFichero( nombreFichero, nombreFichero+".bak", contenidoFichero)) cad += "Fichero salvado con exito<br>";
+    if(salvaFichero( nombreFichero, nombreFichero+".bak", contenidoFichero)) 
+	  {
+	  //cad += "Fichero salvado con exito<br>";
+	  handleListaFicheros();
+	  return;
+	  }
     else cad += "No se pudo salvar el fichero<br>"; 
     }
   else cad += "Falta el argumento <nombre de fichero>"; 
@@ -851,7 +816,12 @@ void handleBorraFichero(void)
     {
     nombreFichero=server.arg("nombre");
 
-    if(borraFichero(nombreFichero)) cad += "El fichero " + nombreFichero + " ha sido borrado.\n";
+    if(borraFichero(nombreFichero)) 
+      {
+      //cad += "El fichero " + nombreFichero + " ha sido borrado.\n";
+      handleListaFicheros();
+      return;
+      }
     else cad += "No sepudo borrar el fichero " + nombreFichero + ".\n"; 
     }
   else cad += "Falta el argumento <nombre de fichero>"; 

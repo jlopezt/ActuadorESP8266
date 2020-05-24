@@ -3,7 +3,7 @@
 "puerto": 1883, 
 "usuarioMQTT": "usuario", 
 "passwordMQTT": "password", 
-"ID_MQTT": "navidadPre", 
+"ID_MQTT": "LuzGaraje", 
 "topicRoot": "casaPre", 
 "publicarEntradas": 1,
 "publicarSalidas": 1

@@ -1,11 +1,13 @@
 {
   "Salidas": [
     {
-    "Dx": 23, 
+    "Dx": 0, 
     "nombre": "Luz",
     "inicio": "off",
+    "tipo": 1,
+    "valorPWM": 128,
     "anchoPulso": 0,
-    "modo": 3,
+    "modo": 2,
     "controlador": 0,
     "Estados": [
       {"valor": 0, "texto": "Encendido"},
@@ -16,3 +18,5 @@
       {"valor": 1, "texto": "Apagado"}
       ]
     }
+  ]
+}

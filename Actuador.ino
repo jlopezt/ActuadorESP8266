@@ -11,7 +11,7 @@
 /***************************** Defines *****************************/
 //Defines generales
 #define NOMBRE_FAMILIA   "Actuador/Secuenciador (E/S)"
-#define VERSION          "4.3.1 (ESP8266v2.4.2 OTA|MQTT|Logic+|Secuenciador|eventos SNTP|Alineado ESP32)"
+#define VERSION          "4.4.0 (ESP8266v2.4.2 OTA|MQTT|Logic+|Secuenciador|eventos SNTP|Alineado ESP32)"
 #define SEPARADOR        '|'
 #define SUBSEPARADOR     '#'
 #define KO               -1
@@ -67,10 +67,28 @@ uint16_t vuelta = 0;//MAX_VUELTAS-100; //vueltas de loop
 int debugGlobal=0; //por defecto desabilitado
 boolean candado=false; //Candado de configuracion. true implica que la ultima configuracion fue mal
 /***************************** variables globales *****************************/
+/************************* FUNCIONES PARA EL BUITIN LED ***************************/
+void configuraLed(void){pinMode(LED_BUILTIN, OUTPUT);}
+void enciendeLed(void){digitalWrite(LED_BUILTIN, HIGH);}
+void apagaLed(void){digitalWrite(LED_BUILTIN, LOW);}
+void parpadeaLed(uint8_t veces, uint16_t espera=100)
+  {
+  for(uint8_t i=0;i<2*veces;i++)
+    {
+    delay(espera/2);
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+    }
+  }
+/***********************************************************************************/  
 
+/*************************************** SETUP ***************************************/
 void setup()
   {
   Serial.begin(115200);
+  configuraLed();
+  enciendeLed();
+    pinMode(14,OUTPUT);
+
   Serial.printf("\n\n\n");
   Serial.printf("*************** %s ***************\n",NOMBRE_FAMILIA);
   Serial.printf("*************** %s ***************\n",VERSION);
@@ -102,26 +120,36 @@ void setup()
   //Configuracion general
   Serial.printf("\n\nInit General ---------------------------------------------------------------------\n");
   inicializaConfiguracion(debugGlobal);
+  parpadeaLed(1);
 
   //Wifi
   Serial.println("\n\nInit WiFi -----------------------------------------------------------------------\n");
-  if (inicializaWifi(1))//debugGlobal)) No tiene sentido debugGlobal, no hay manera de activarlo
+  if (inicializaWifi(1))
     {
+    parpadeaLed(5,200); 
     /*----------------Inicializaciones que necesitan red-------------*/
     //OTA
     Serial.println("\n\nInit OTA ------------------------------------------------------------------------\n");
     inicializaOTA(debugGlobal);
+    parpadeaLed(1);
     //SNTP
     Serial.printf("\n\nInit SNTP ------------------------------------------------------------------------\n");
     inicializaReloj();    
+    parpadeaLed(2);
     //MQTT
     Serial.println("\n\nInit MQTT -----------------------------------------------------------------------\n");
     inicializaMQTT();
+    parpadeaLed(3);
     //WebServer
     Serial.println("\n\nInit Web ------------------------------------------------------------------------\n");
     inicializaWebServer();
+    //mDNS
+    Serial.println("\n\nInit mDNS -----------------------------------------------------------------------\n");
+    inicializamDNS(NULL);
+    parpadeaLed(3);
     }
   else Serial.println("No se pudo conectar al WiFi");
+  apagaLed();
 
   //Entradas
   Serial.println("\n\nInit entradas ------------------------------------------------------------------------\n");
@@ -148,6 +176,8 @@ void setup()
   else Serial.println("ERROR - No se pudo borrar el candado");
   
   compruebaConfiguracion(0);
+  parpadeaLed(2);
+  apagaLed();//Por si acaso...
   
   Serial.printf("\n\n");
   Serial.println("***************************************************************");
@@ -290,5 +320,3 @@ String generaJsonConfiguracionNivelActivo(String configActual, int nivelAct)
 
   return salida;  
   }  
-
-  

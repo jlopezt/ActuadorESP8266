@@ -249,6 +249,14 @@ void inicializaOrden(void)
   comandos[i].descripcion="Comprueba la configuracion del sistema";
   comandos[i++].p_func_comando=func_comando_compruebaConfiguracion;
 
+  comandos[i].comando="setPWM";
+  comandos[i].descripcion="Actualiza el valor de activo para la salida PWM";
+  comandos[i++].p_func_comando=func_comando_setPWM;
+
+  comandos[i].comando="getPWM";
+  comandos[i].descripcion="Devuelve el valor de activo para la salida PWM";
+  comandos[i++].p_func_comando=func_comando_getPWM;
+
   //resto
   for(;i<MAX_COMANDOS;)
     {
@@ -519,5 +527,16 @@ void func_comando_debugMaquinaEstados(int iParametro, char* sParametro, float fP
 void func_comando_compruebaConfiguracion(int iParametro, char* sParametro, float fParametro)//"debug")
   {
   compruebaConfiguracion(0);
+  }  
+
+void func_comando_setPWM(int iParametro, char* sParametro, float fParametro)//"debug")
+  {
+  setValorPWM(0,iParametro);
+  Serial.printf("valor: %i\n",getValorPWM(0));
+  }  
+
+void func_comando_getPWM(int iParametro, char* sParametro, float fParametro)//"debug")
+  {
+  Serial.printf("valor: %i\n",getValorPWM(0));
   }  
 /***************************** FIN funciones para comandos ******************************************/ 
