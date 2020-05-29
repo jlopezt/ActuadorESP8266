@@ -132,7 +132,7 @@ void handleRoot()
 
       cad += "<TR>\n";
       cad += "<TD STYLE=\"color: " + TEXTO + "; text-align: center; background-color: " + FONDO + "; width: 100px\">" + nombreRele(i) + "</TD>\n";
-      cad += "<TD STYLE=\"color: " + TEXTO + "; text-align: center; background-color: " + String((estadoRele(i)==ESTADO_DESACTIVO?DESACTIVO:ACTIVO)) + "; width: 100px\">" + nombreEstadoSalidaActual(i) + "</TD>\n";
+      cad += "<TD STYLE=\"color: " + TEXTO + "; text-align: center; background-color: " + String((estadoRele(i)==ESTADO_DESACTIVO?DESACTIVO:ACTIVO)) + "; width: 100px\">" + String(nombreEstadoSalida(i,estadoSalida(i))) + "</TD>";
 
         //acciones en funcion del modo
       switch (modoSalida(i))          
@@ -162,7 +162,7 @@ void handleRoot()
           cad += "<TD colspan=2> | Secuenciador " + String(controladorSalida(i)) + "</TD>\n";
           break;
         case MODO_SEGUIMIENTO:
-          cad += "<TD>Siguiendo a entrada " + String(controladorSalida(i)) + "</TD>\n";
+          cad += "<TD>Siguiendo a la entrada " + nombreEntrada(controladorSalida(i)) + "</TD>\n"; //String(controladorSalida(i)) + "</TD>\n";
           cad += "<td>\n";
           cad += "<form action=\"fuerzaManualSalida\">\n";
           cad += "<input  type=\"hidden\" id=\"id\" name=\"id\" value=\"" + String(i) + "\" >\n";

@@ -33,7 +33,8 @@
 #define TIPO_DIGITAL      0
 #define TIPO_PWM          1
 
-#define PWM_RANGE       255
+#define PWM_RANGE         1023
+#define FRECUENCIA_PWM    200
 
 #define TOPIC_MENSAJES    "mensajes"
 
@@ -148,8 +149,9 @@ void inicializaSalidas(void)
     salidas[i].mensajes[1]="";
     }
 
-  //Ajusto el rango de valores para salida PWM  
+  //Ajusto el rango de valores y la frecuencia para las salidas PWM  
   analogWriteRange(PWM_RANGE);
+  analogWriteFreq(FRECUENCIA_PWM);//bajo la frecuencia, no necesito 1Khz
   
   //leo la configuracion del fichero
   if(!recuperaDatosSalidas(debugGlobal)) Serial.println("Configuracion de los reles por defecto");
@@ -168,24 +170,16 @@ void inicializaSalidas(void)
         if(salidas[i].valorPWM>PWM_RANGE) salidas[i].valorPWM=PWM_RANGE;
 
         //parte fisica
-        analogWriteFreq(200);//bajo la frecuencia, no necesito 1Khz
         pinMode(pinGPIOS[salidas[i].pin], OUTPUT); //es salida
+        
         if(salidas[i].inicio==1) 
           {
-          if(salidas[i].tipo==TIPO_PWM) 
-            {
-            analogWrite(pinGPIOS[salidas[i].pin], salidas[i].valorPWM);
-            Serial.printf("Inicializo a valorPWM el pin %i\n",pinGPIOS[salidas[i].pin]);
-            }
+          if(salidas[i].tipo==TIPO_PWM) analogWrite(pinGPIOS[salidas[i].pin], salidas[i].valorPWM);
           else digitalWrite(pinGPIOS[salidas[i].pin], nivelActivo);  //lo inicializo a apagado
           }
         else 
           {
-          if(salidas[i].tipo==TIPO_PWM)
-            {
-            analogWrite(pinGPIOS[salidas[i].pin], 0);
-            Serial.printf("Inicializo a 0 PWM el pin %i\n",pinGPIOS[salidas[i].pin]);
-            }
+          if(salidas[i].tipo==TIPO_PWM) analogWrite(pinGPIOS[salidas[i].pin], 0);
           else  digitalWrite(pinGPIOS[salidas[i].pin], !nivelActivo);  //lo inicializo a apagado 
           }
           
@@ -288,8 +282,8 @@ boolean parseaConfiguracionEntradas(String contenido)
 
   Serial.printf("*************************\nEntradas:\n"); 
   for(int8_t i=0;i<MAX_ENTRADAS;i++) 
-  	{
-  	Serial.printf("%01i: %s|pin: %i|configurado= %i|tipo=%s|estado activo: %i\n",i,entradas[i].nombre.c_str(),entradas[i].pin,entradas[i].configurada,entradas[i].tipo.c_str(),entradas[i].estadoActivo);
+    {
+    Serial.printf("%01i: %s|pin: %i|configurado= %i|tipo=%s|estado activo: %i\n",i,entradas[i].nombre.c_str(),entradas[i].pin,entradas[i].configurada,entradas[i].tipo.c_str(),entradas[i].estadoActivo);
     Serial.printf("Mensajes:\n");
     for(int8_t m=0;m<2;m++) 
       {
@@ -359,8 +353,8 @@ boolean parseaConfiguracionSalidas(String contenido)
     
   Serial.printf("*************************\nSalidas:\n"); 
   for(int8_t i=0;i<MAX_SALIDAS;i++) 
-  	{
-  	//Serial.printf("%01i: %s| pin: %i| ancho del pulso: %i| configurado= %i| entrada asociada= %i\n",i,salidas[i].nombre.c_str(),salidas[i].pin,salidas[i].anchoPulso,salidas[i].configurado,salidas[i].entradaAsociada);
+    {
+    //Serial.printf("%01i: %s| pin: %i| ancho del pulso: %i| configurado= %i| entrada asociada= %i\n",i,salidas[i].nombre.c_str(),salidas[i].pin,salidas[i].anchoPulso,salidas[i].configurado,salidas[i].entradaAsociada);
     Serial.printf("%01i: %s | configurado= %i | pin: %i | modo: %i | controlador: %i | inicio: %i | tipo: %i | valor PWM: %i | ancho del pulso: %i\n",i,salidas[i].nombre.c_str(),salidas[i].configurado,salidas[i].pin, salidas[i].modo,salidas[i].controlador, salidas[i].inicio, salidas[i].tipo, salidas[i].valorPWM, salidas[i].anchoPulso); 
     Serial.printf("Estados:\n");
     for(int8_t e=0;e<2;e++) 
@@ -475,6 +469,7 @@ int8_t estadoRele(int8_t id)
   
   return salidas[id].estado;
  }
+int8_t estadoSalida(int8_t id){return estadoRele(id);}
 
 /********************************************************/
 /*                                                      */
@@ -499,7 +494,7 @@ int16_t getValorPWM(int8_t id)
   {
   if(id <0 || id>=MAX_SALIDAS) return NO_CONFIGURADO; //Rele fuera de rango
   if(salidas[id].configurado!=CONFIGURADO) return -1; //No configurado
-
+  
   if(salidas[id].tipo==TIPO_PWM) return salidas[id].valorPWM;
   else return NO_CONFIGURADO;
   }
@@ -553,20 +548,12 @@ int8_t conmutaRele(int8_t id, int8_t estado_final, int debug)
   //parte fisica. Me he hecho un mapa de karnaugh y sale asi
   if(estado_final==nivelActivo) 
     {
-    if(salidas[id].tipo==TIPO_PWM) 
-      {
-      analogWrite(pinGPIOS[salidas[id].pin], salidas[id].valorPWM);
-      Serial.printf("Pongo a valorPWM el pin %i\n",pinGPIOS[salidas[id].pin]);
-      }    
+    if(salidas[id].tipo==TIPO_PWM) analogWrite(pinGPIOS[salidas[id].pin], salidas[id].valorPWM);
     else digitalWrite(pinGPIOS[salidas[id].pin], HIGH); //controlo el rele
     }
   else
     {
-    if(salidas[id].tipo==TIPO_PWM) 
-      {
-      analogWrite(pinGPIOS[salidas[id].pin], 0);
-      Serial.printf("Pongo a 0 el pin %i\n",pinGPIOS[salidas[id].pin]);
-      }    
+    if(salidas[id].tipo==TIPO_PWM) analogWrite(pinGPIOS[salidas[id].pin], 0);
     else digitalWrite(pinGPIOS[salidas[id].pin], LOW); //controlo el rele
     }
   
@@ -680,7 +667,7 @@ void asociarSecuenciador(int8_t id, int8_t plan)
   {
   //validaciones previas
   if(id >=0 && id<MAX_SALIDAS) 
-  	{
+    {
     salidas[id].modo=MODO_SECUENCIADOR;
     salidas[id].controlador=plan; 
     }
@@ -806,8 +793,10 @@ String nombreEstadoSalida(uint8_t id, uint8_t estado)
   //validaciones previas
   if(id <0 || id>=MAX_SALIDAS) return "ERROR";
   if(estado>2) return "ERROR";
-       
-  return salidas[id].nombreEstados[estado];
+
+  if (estado!=ESTADO_DESACTIVO) return salidas[id].nombreEstados[ESTADO_ACTIVO];
+  
+  return salidas[id].nombreEstados[ESTADO_DESACTIVO];
   }   
 
 /********************************************************/
@@ -819,8 +808,10 @@ String nombreEstadoSalidaActual(uint8_t id)
   {
   //validaciones previas
   if(id <0 || id>=MAX_SALIDAS) return "ERROR";
-       
-  return salidas[id].nombreEstados[salidas[id].estado];
+
+  if (salidas[id].estado!=ESTADO_DESACTIVO) return salidas[id].nombreEstados[ESTADO_ACTIVO];
+  
+  return salidas[id].nombreEstados[ESTADO_DESACTIVO];
   }   
 
 /********************************************************/
@@ -911,7 +902,7 @@ void consultaEntradas(bool debug)
       if(entradas[i].estadoFisico==entradas[i].estadoActivo) entradas[i].estado=ESTADO_ACTIVO;
       else entradas[i].estado=ESTADO_DESACTIVO;
       if (debug) Serial.printf("Entrada %i en pin %i leido %i, alor logico %i\n",i,entradas[i].pin,entradas[i].estadoFisico,entradas[i].estado);
-	  	  
+        
       if(valor_inicial!=NO_CONFIGURADO && valor_inicial!=entradas[i].estado) enviaMensajeEntrada(i,entradas[i].estado);      
       }
     }   

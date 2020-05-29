@@ -11,7 +11,7 @@
 /***************************** Defines *****************************/
 //Defines generales
 #define NOMBRE_FAMILIA   "Actuador/Secuenciador (E/S)"
-#define VERSION          "4.4.0 (ESP8266v2.4.2 OTA|MQTT|Logic+|Secuenciador|eventos SNTP|Alineado ESP32)"
+#define VERSION          "4.4.1 (ESP8266v2.4.2 OTA|MQTT|Logic+|Secuenciador|eventos SNTP)"
 #define SEPARADOR        '|'
 #define SUBSEPARADOR     '#'
 #define KO               -1
