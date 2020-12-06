@@ -4,7 +4,7 @@
 /*  Dimaniza la interfaz Web                  */
 /*                                            */
 /**********************************************/
-
+/*
 #define PUERTO_WEBSOCKETS 81
 #define NOT_CONNECTED     -1
 
@@ -106,7 +106,7 @@ void webSocketEvent(uint8_t clienteId, WStype_t type, uint8_t * payload, size_t 
 /*                                            */
 /*   Gestiona los mensajes recibidos por WS   */
 /*                                            */
-/**********************************************/
+/**********************************************
 void gestionaMensajes(uint8_t cliente, String mensaje)
   {
   Serial.printf("Procesando mensaje %s, cliente: %i\n",mensaje.c_str(),cliente);

@@ -3,10 +3,15 @@
 /*  Control de entradas y salidas        */
 /*                                       */
 /*****************************************/
+#ifndef ENTRADAS_SALIDAS
+  #define MAX_PINES 0
+#else
+  #define MAX_PINES 10
+#endif
 
 //Definicion de pines
-#define MAX_PINES        20 //numero de pines disponibles para entradas y salidas
-#define MAX_ENTRADAS     10 //numero maximo de reles soportado
+//#define MAX_PINES        20 //numero de pines disponibles para entradas y salidas
+#define MAX_ENTRADAS     4 //numero maximo de reles soportado
 #define MAX_SALIDAS      MAX_PINES-MAX_ENTRADAS //numero maximo de salidas
 #define GPIOS_DIGITALES  9
 
@@ -903,7 +908,7 @@ void consultaEntradas(bool debug)
       else entradas[i].estado=ESTADO_DESACTIVO;
       if (debug) Serial.printf("Entrada %i en pin %i leido %i, alor logico %i\n",i,entradas[i].pin,entradas[i].estadoFisico,entradas[i].estado);
         
-      if(valor_inicial!=NO_CONFIGURADO && valor_inicial!=entradas[i].estado) enviaMensajeEntrada(i,entradas[i].estado);      
+      //if(valor_inicial!=NO_CONFIGURADO && valor_inicial!=entradas[i].estado) enviaMensajeEntrada(i,entradas[i].estado);      
       }
     }   
   }

@@ -141,7 +141,7 @@ void handleRoot()
       cad += "<TD STYLE=\"color: " + TEXTO + "; text-align: center; background-color: " + FONDO + "; width: 100px\">" + nombreRele(i) + "</TD>\n";
       cad += "<TD STYLE=\"color: " + TEXTO + "; text-align: center; background-color: " + String((estadoRele(i)==ESTADO_DESACTIVO?DESACTIVO:ACTIVO)) + "; width: 100px\">" + String(nombreEstadoSalida(i,estadoSalida(i))) + "</TD>";
 
-        //acciones en funcion del modo
+      //acciones en funcion del modo
       switch (modoSalida(i))          
         {
         case MODO_MANUAL:
@@ -166,7 +166,19 @@ void handleRoot()
           cad += "</td>\n";    
           break;
         case MODO_SECUENCIADOR:
-          cad += "<TD colspan=2> | Secuenciador " + String(controladorSalida(i)) + "</TD>\n";
+          //cad += "<TD colspan=2> | Secuenciador " + String(controladorSalida(i)) + "</TD>\n";
+          if(estadoSecuenciador())//Si el secuenciador esta on 
+            { 
+            cad += "<TD colspan=2> | Secuenciador " + String(controladorSalida(i)) + "</TD>"; 
+            } 
+          else       
+            { 
+            //Enlace para activar o desactivar 
+            if (estadoRele(i)==1) orden="desactiva"; else orden="activa";//para 0 y 2 (apagado y en pulso) activa 
+            cad += "<TD><a href=\"" + orden + "Rele\?id=" + String(i) + "\" target=\"_self\">" + orden + " rele</a></TD>\n";   
+            //Enlace para generar un pulso 
+            cad += "<TD><a href=\"pulsoRele\?id=" + String(i) + "\" target=\"_self\">Pulso</a></TD>\n"; 
+            }           
           break;
         case MODO_SEGUIMIENTO:
           cad += "<TD>Siguiendo a la entrada " + nombreEntrada(controladorSalida(i)) + "</TD>\n"; //String(controladorSalida(i)) + "</TD>\n";

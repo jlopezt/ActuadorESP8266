@@ -1,20 +1,22 @@
-{
-  "Salidas": [
-    {
-    "Dx": 0, 
-    "nombre": "Luces",
-    "inicio": "off",
-    "anchoPulso": 1000,
-    "modo": 1,
-    "controlador": 1,
-    "Estados": [
-      {"valor": 0, "texto": "Encendido"},
-      {"valor": 1, "texto": "Apagado"}
-      ],
-    "Mensajes": [
-      {"valor": 0, "texto": "Encendido"},
-      {"valor": 1, "texto": "Apagado"}
-      ]
-    }
-  ]
+{ 
+  "Salidas": [ 
+    { 
+    "Dx": 1,  
+    "nombre": "Luces", 
+    "inicio": "off", 
+    "tipo": 0, 
+    "valorPWM": 0, 
+    "anchoPulso": 1000, 
+    "modo": 1, 
+    "controlador": 1, 
+    "Estados": [ 
+      {"valor": 0, "texto": "Encendido"}, 
+      {"valor": 1, "texto": "Apagado"} 
+      ], 
+    "Mensajes": [ 
+      {"valor": 0, "texto": "Encendido"}, 
+      {"valor": 1, "texto": "Apagado"} 
+      ] 
+    } 
+  ] 
 }

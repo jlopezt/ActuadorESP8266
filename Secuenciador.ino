@@ -3,8 +3,13 @@
 /*  Secuenciador de fases de entradas    */
 /*                                       */
 /*****************************************/
+#ifndef SECUENCIADOR
+  #define MAX_PLANES 0
+#else
+  #define MAX_PLANES 2
+#endif
 
-#define MAX_PLANES 2
+//#define MAX_PLANES 2
 #define HORAS_EN_DIA 24
 
 #ifndef NO_CONFIGURADO 

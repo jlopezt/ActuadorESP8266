@@ -13,9 +13,13 @@
 /*  el resto configurables                 */
 /*                                         */
 /*******************************************/
-
 /********************definiciones**************************/
-#define MAX_ESTADOS 10
+#ifndef MAQUINA_ESTADOS
+  #define MAX_ESTADOS 0
+#else
+  #define MAX_ESTADOS 10
+#endif
+
 #define MAX_TRANSICIONES 3*MAX_ESTADOS
 #define ESTADO_ERROR   0 //Estado de error de la logica de la maquina. Imposible evolucionar del ese estado con las estradas actuales
 #define ESTADO_INICIAL 1 //Estado inicio

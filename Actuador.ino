@@ -11,12 +11,26 @@
 /***************************** Defines *****************************/
 //Defines generales
 #define NOMBRE_FAMILIA   "Actuador/Secuenciador (E/S)"
-#define VERSION          "4.5.1 (ESP8266v2.4.2 OTA|MQTT|Logic+|Secuenciador|eventos SNTP)"
+#define VERSION          "4.5.2 (ESP8266v2.4.2 OTA|MQTT|Logic+|Secuenciador|eventos SNTP)"
 #define SEPARADOR        '|'
 #define SUBSEPARADOR     '#'
 #define KO               -1
 #define OK                0
 #define MAX_VUELTAS      UINT16_MAX// 32767 
+
+/**************************************/
+/*      definiciones de modulos       */
+/* La defincion de moludos influye en */
+/* la dimension de las matrices asoci-*/
+/* adas que consumen memoria.         */
+/*                                    */
+/* No deinir un modulo (#undef) hace  */
+/* que no se pueda configurar esa fun-*/
+/* cionalidad                         */
+#define ENTRADAS_SALIDAS
+#define  MAQUINA_ESTADOS
+#define  SECUENCIADOR 
+/**************************************/
 
 //Ficheros de configuracion
 #define FICHERO_CANDADO                  "/Candado"
@@ -46,7 +60,7 @@
 #define FRECUENCIA_SECUENCIADOR          10 //cada cuantas vueltas de loop atiende al secuenciador
 #define FRECUENCIA_MAQUINAESTADOS        10 //cada cuantas vueltas de loop atiende a la maquina de estados
 #define FRECUENCIA_SERVIDOR_WEB           1 //cada cuantas vueltas de loop atiende el servidor web
-#define FRECUENCIA_SERVIDOR_WEBSOCKET     1 //cada cuantas vueltas de loop atiende el servidor web
+//#define FRECUENCIA_SERVIDOR_WEBSOCKET     1 //cada cuantas vueltas de loop atiende el servidor web
 #define FRECUENCIA_MQTT                  10 //cada cuantas vueltas de loop envia y lee del broker MQTT
 #define FRECUENCIA_ENVIO_DATOS          100 //cada cuantas vueltas de loop envia al broker el estado de E/S
 #define FRECUENCIA_ORDENES                2 //cada cuantas vueltas de loop atiende las ordenes via serie 
@@ -57,7 +71,7 @@
 /***************************** Includes *****************************/
 #include <ArduinoOTA.h>
 #include <ArduinoJson.h>
-#include <WebSocketsServer.h>
+//#include <WebSocketsServer.h>
 /***************************** Includes *****************************/
 
 /***************************** variables globales *****************************/
@@ -145,9 +159,11 @@ void setup()
     //WebServer
     Serial.println("\n\nInit Web ------------------------------------------------------------------------\n");
     inicializaWebServer();
+    /*
     //WebSockets
     Serial.println("\n\nInit WebSockets -----------------------------------------------------------------\n");
     inicializaWebSockets();
+    */
     //mDNS
     Serial.println("\n\nInit mDNS -----------------------------------------------------------------------\n");
     inicializamDNS(NULL);
@@ -217,7 +233,7 @@ void loop()
   if ((vuelta % FRECUENCIA_MAQUINAESTADOS)==0) actualizaMaquinaEstados(debugGlobal); //Actualiza la maquina de estados
   //Prioridad 3: Interfaces externos de consulta    
   if ((vuelta % FRECUENCIA_SERVIDOR_WEB)==0) webServer(debugGlobal); //atiende el servidor web
-  if ((vuelta % FRECUENCIA_SERVIDOR_WEB)==0) atiendeWebSocket(debugGlobal); //atiende el servidor web
+  //if ((vuelta % FRECUENCIA_SERVIDOR_WEBSOCKET)==0) atiendeWebSocket(debugGlobal); //atiende el servidor web
   if ((vuelta % FRECUENCIA_MQTT)==0) atiendeMQTT();      
   if ((vuelta % FRECUENCIA_ENVIO_DATOS)==0) enviaDatos(debugGlobal); //publica via MQTT los datos de entradas y salidas, segun configuracion
   if ((vuelta % FRECUENCIA_ORDENES)==0) while(HayOrdenes(debugGlobal)) EjecutaOrdenes(debugGlobal); //Lee ordenes via serie
