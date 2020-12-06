@@ -11,7 +11,7 @@
 /***************************** Defines *****************************/
 //Defines generales
 #define NOMBRE_FAMILIA   "Actuador/Secuenciador (E/S)"
-#define VERSION          "4.4.1 (ESP8266v2.4.2 OTA|MQTT|Logic+|Secuenciador|eventos SNTP)"
+#define VERSION          "4.5.1 (ESP8266v2.4.2 OTA|MQTT|Logic+|Secuenciador|eventos SNTP)"
 #define SEPARADOR        '|'
 #define SUBSEPARADOR     '#'
 #define KO               -1
@@ -39,23 +39,25 @@
 #define MAQUINAESTADOS_CONFIG_BAK_FILE   "/MaqEstadosConfig.json.bak"
 
 // Una vuela de loop son ANCHO_INTERVALO segundos 
-#define ANCHO_INTERVALO           100 //Ancho en milisegundos de la rodaja de tiempo
-#define FRECUENCIA_OTA              5 //cada cuantas vueltas de loop atiende las acciones
-#define FRECUENCIA_ENTRADAS         5 //cada cuantas vueltas de loop atiende las entradas
-#define FRECUENCIA_SALIDAS          5 //cada cuantas vueltas de loop atiende las salidas
-#define FRECUENCIA_SECUENCIADOR    10 //cada cuantas vueltas de loop atiende al secuenciador
-#define FRECUENCIA_MAQUINAESTADOS  10 //cada cuantas vueltas de loop atiende a la maquina de estados
-#define FRECUENCIA_SERVIDOR_WEB    1 //cada cuantas vueltas de loop atiende el servidor web
-#define FRECUENCIA_MQTT           10 //cada cuantas vueltas de loop envia y lee del broker MQTT
-#define FRECUENCIA_ENVIO_DATOS   100 //cada cuantas vueltas de loop envia al broker el estado de E/S
-#define FRECUENCIA_ORDENES         2 //cada cuantas vueltas de loop atiende las ordenes via serie 
-#define FRECUENCIA_SNTP          100 //cada cuantas vueltas de loop atiende los eventos SNTP recibidos
-#define FRECUENCIA_WIFI_WATCHDOG 100 //cada cuantas vueltas comprueba si se ha perdido la conexion WiFi
+#define ANCHO_INTERVALO                 100 //Ancho en milisegundos de la rodaja de tiempo
+#define FRECUENCIA_OTA                    5 //cada cuantas vueltas de loop atiende las acciones
+#define FRECUENCIA_ENTRADAS               5 //cada cuantas vueltas de loop atiende las entradas
+#define FRECUENCIA_SALIDAS                5 //cada cuantas vueltas de loop atiende las salidas
+#define FRECUENCIA_SECUENCIADOR          10 //cada cuantas vueltas de loop atiende al secuenciador
+#define FRECUENCIA_MAQUINAESTADOS        10 //cada cuantas vueltas de loop atiende a la maquina de estados
+#define FRECUENCIA_SERVIDOR_WEB           1 //cada cuantas vueltas de loop atiende el servidor web
+#define FRECUENCIA_SERVIDOR_WEBSOCKET     1 //cada cuantas vueltas de loop atiende el servidor web
+#define FRECUENCIA_MQTT                  10 //cada cuantas vueltas de loop envia y lee del broker MQTT
+#define FRECUENCIA_ENVIO_DATOS          100 //cada cuantas vueltas de loop envia al broker el estado de E/S
+#define FRECUENCIA_ORDENES                2 //cada cuantas vueltas de loop atiende las ordenes via serie 
+#define FRECUENCIA_SNTP                 100 //cada cuantas vueltas de loop atiende los eventos SNTP recibidos
+#define FRECUENCIA_WIFI_WATCHDOG        100 //cada cuantas vueltas comprueba si se ha perdido la conexion WiFi
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
 #include <ArduinoOTA.h>
 #include <ArduinoJson.h>
+#include <WebSocketsServer.h>
 /***************************** Includes *****************************/
 
 /***************************** variables globales *****************************/
@@ -69,8 +71,8 @@ boolean candado=false; //Candado de configuracion. true implica que la ultima co
 /***************************** variables globales *****************************/
 /************************* FUNCIONES PARA EL BUITIN LED ***************************/
 void configuraLed(void){pinMode(LED_BUILTIN, OUTPUT);}
-void enciendeLed(void){digitalWrite(LED_BUILTIN, HIGH);}
-void apagaLed(void){digitalWrite(LED_BUILTIN, LOW);}
+void enciendeLed(void){digitalWrite(LED_BUILTIN, LOW);}
+void apagaLed(void){digitalWrite(LED_BUILTIN, HIGH);}
 void parpadeaLed(uint8_t veces, uint16_t espera=100)
   {
   for(uint8_t i=0;i<2*veces;i++)
@@ -143,6 +145,9 @@ void setup()
     //WebServer
     Serial.println("\n\nInit Web ------------------------------------------------------------------------\n");
     inicializaWebServer();
+    //WebSockets
+    Serial.println("\n\nInit WebSockets -----------------------------------------------------------------\n");
+    inicializaWebSockets();
     //mDNS
     Serial.println("\n\nInit mDNS -----------------------------------------------------------------------\n");
     inicializamDNS(NULL);
@@ -212,6 +217,7 @@ void loop()
   if ((vuelta % FRECUENCIA_MAQUINAESTADOS)==0) actualizaMaquinaEstados(debugGlobal); //Actualiza la maquina de estados
   //Prioridad 3: Interfaces externos de consulta    
   if ((vuelta % FRECUENCIA_SERVIDOR_WEB)==0) webServer(debugGlobal); //atiende el servidor web
+  if ((vuelta % FRECUENCIA_SERVIDOR_WEB)==0) atiendeWebSocket(debugGlobal); //atiende el servidor web
   if ((vuelta % FRECUENCIA_MQTT)==0) atiendeMQTT();      
   if ((vuelta % FRECUENCIA_ENVIO_DATOS)==0) enviaDatos(debugGlobal); //publica via MQTT los datos de entradas y salidas, segun configuracion
   if ((vuelta % FRECUENCIA_ORDENES)==0) while(HayOrdenes(debugGlobal)) EjecutaOrdenes(debugGlobal); //Lee ordenes via serie

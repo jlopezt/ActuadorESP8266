@@ -1,0 +1,40 @@
+{
+  "Salidas": [
+    {
+    "Dx": 0, 
+    "nombre": "Luz",
+    "inicio": "off",
+    "tipo": 1,
+    "valorPWM": 1000,
+    "anchoPulso": 3000,
+    "modo": 2,
+    "controlador": 0,
+    "Estados": [
+      {"valor": 0, "texto": "Apagado"},
+      {"valor": 1, "texto": "Encendido"}
+      ],
+    "Mensajes": [
+      {"valor": 0, "texto": "Apagado"},
+      {"valor": 1, "texto": "Encendido"}
+      ]
+    },
+    {
+    "Dx": 2, 
+    "nombre": "Led",
+    "inicio": "off",
+    "tipo": 0,
+    "valorPWM": 0,
+    "anchoPulso": 3000,
+    "modo": 2,
+    "controlador": 0,
+    "Estados": [
+      {"valor": 0, "texto": "Apagado"},
+      {"valor": 1, "texto": "Encendido"}
+      ],
+    "Mensajes": [
+      {"valor": 0, "texto": "Apagado"},
+      {"valor": 1, "texto": "Encendido"}
+      ]
+    }
+  ]
+}

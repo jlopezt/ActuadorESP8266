@@ -1,0 +1,60 @@
+{
+	"Entradas": [
+		{
+		"Dx": 1, 
+		"nombre": "Arriba", 
+		"tipo": "INPUT",
+		"estadoActivo": 1,
+		"Estados": [
+			{"valor": 0, "texto": "-"},
+			{"valor": 1, "texto": "Arriba"}
+			],
+		"Mensajes": [
+			{"valor": 0, "texto": "--"},
+			{"valor": 1, "texto": "Puerta abierta"}
+			]
+		},
+		{
+		"Dx": 2, 
+		"nombre": "Abajo", 
+		"tipo": "INPUT",
+		"estadoActivo": 1,
+		"Estados": [
+			{"valor": 0, "texto": "-"},
+			{"valor": 1, "texto": "Abajo"}
+			],
+		"Mensajes": [
+			{"valor": 0, "texto": "--"},
+			{"valor": 1, "texto": "Puerta cerrada"}
+			]
+		},
+		{
+		"Dx": 3, 
+		"nombre": "Seta", 
+		"tipo": "INPUT",
+		"estadoActivo": 1,
+		"Estados": [
+			{"valor": 0, "texto": "-"},
+			{"valor": 1, "texto": "Alarma"}
+			],
+		"Mensajes": [
+			{"valor": 0, "texto": "--"},
+			{"valor": 1, "texto": "Alarma activada"}
+			]
+		},				
+		{
+		"Dx": 4, 
+		"nombre": "Celula", 
+		"tipo": "INPUT",
+		"estadoActivo": 1,
+		"Estados": [
+			{"valor": 0, "texto": "-"},
+			{"valor": 1, "texto": "Objeto"}
+			],
+		"Mensajes": [
+			{"valor": 0, "texto": "--"},
+			{"valor": 1, "texto": "Objeto presente"}
+			]
+		}
+	]
+}

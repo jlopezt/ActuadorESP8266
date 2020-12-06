@@ -1,12 +1,12 @@
 {
   "Salidas": [
     {
-    "Dx": 0, 
-    "nombre": "Luces",
+    "Dx": 6, 
+    "nombre": "Pulsador",
     "inicio": "off",
     "anchoPulso": 1000,
-    "modo": 1,
-    "controlador": 1,
+    "modo": 0,
+    "controlador": 0,
     "Estados": [
       {"valor": 0, "texto": "Encendido"},
       {"valor": 1, "texto": "Apagado"}

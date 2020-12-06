@@ -257,6 +257,10 @@ void inicializaOrden(void)
   comandos[i].descripcion="Devuelve el valor de activo para la salida PWM";
   comandos[i++].p_func_comando=func_comando_getPWM;
 
+  comandos[i].comando="setSalida";
+  comandos[i].descripcion="Selecciona la salida a configurar PWM";
+  comandos[i++].p_func_comando=func_comando_setSalida;
+
   //resto
   for(;i<MAX_COMANDOS;)
     {
@@ -531,12 +535,22 @@ void func_comando_compruebaConfiguracion(int iParametro, char* sParametro, float
 
 void func_comando_setPWM(int iParametro, char* sParametro, float fParametro)//"debug")
   {
-  setValorPWM(0,iParametro);
-  Serial.printf("valor: %i\n",getValorPWM(0));
+  int8_t salida=getSalidaActiva();
+  if(salida!=-1)  
+    {
+    setValorPWM(salida,iParametro);
+    Serial.printf("valor: %i\n",getValorPWM(salida));
+    }
+  else Serial.printf("valor de salida no valido (%i)\n",salida);  
   }  
 
 void func_comando_getPWM(int iParametro, char* sParametro, float fParametro)//"debug")
   {
-  Serial.printf("valor: %i\n",getValorPWM(0));
+  Serial.printf("valor: %i\n",getValorPWM(getSalidaActiva()));
   }  
+
+void func_comando_setSalida(int iParametro, char* sParametro, float fParametro)//"debug")
+  {
+  setSalidaActiva(iParametro);  
+  }   
 /***************************** FIN funciones para comandos ******************************************/ 

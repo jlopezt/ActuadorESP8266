@@ -75,7 +75,7 @@ salida_t salidas[MAX_SALIDAS];
 //Variables comunes a E&S
 //tabla de pines GPIOs
 int8_t pinGPIOS[GPIOS_DIGITALES]={16,5,4,0,2,14,12,13,15}; //tiene 9 puertos digitales, el indice es el puerto Dx y el valor el GPIO
-
+int8_t salidaActiva=-1;
 /************************************** Funciones de configuracion ****************************************/
 /*********************************************/
 /* Inicializa los valores de los registros de*/
@@ -1196,3 +1196,13 @@ String generaJsonEstado(void)
   root.printTo(salida);  
   return salida;  
   }   
+
+int8_t setSalidaActiva(int8_t id)
+  {
+  if(id <0 || id>=MAX_SALIDAS) return NO_CONFIGURADO;
+  if(salidas[id].configurado==NO_CONFIGURADO) return -1; //El rele no esta configurado
+  
+  salidaActiva=id;
+  }  
+  
+int8_t getSalidaActiva(void){return salidaActiva;}

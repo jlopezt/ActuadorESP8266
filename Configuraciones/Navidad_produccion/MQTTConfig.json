@@ -1,1 +1,10 @@
-{ "IPBroker": "10.68.1.100", "puerto": 1883, "usuarioMQTT": "usuario", "passwordMQTT": "password", "ID_MQTT": "navidad", "topicRoot": "casa", "keepAlive": 0, "publicarEntradas": 0, "publicarSalidas": 1 }
+{ 
+"IPBroker": "10.68.1.100", 
+"puerto": 1883, 
+"usuarioMQTT": "domoticae", 
+"passwordMQTT": "88716", 
+"ID_MQTT": "Navidad", 
+"topicRoot": "casa", 
+"publicarEntradas": 0,
+"publicarSalidas": 1
+}
