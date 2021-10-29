@@ -206,13 +206,13 @@ boolean recuperaDatosEntradas(int debug)
 
   if (debug) Serial.println("Recupero configuracion de archivo...");
 
-  if(!leeFicheroConfig(ENTRADAS_CONFIG_FILE, cad)) 
+  if(!leeFichero(ENTRADAS_CONFIG_FILE, cad)) 
     {
     //Confgiguracion por defecto
     Serial.printf("No existe fichero de configuracion de Entradas\n");    
     cad="{\"Entradas\": []}";
     //salvo la config por defecto
-    //if(salvaFicheroConfig(ENTRADAS_CONFIG_FILE, ENTRADAS_CONFIG_BAK_FILE, cad)) Serial.printf("Fichero de configuracion de Entradas creado por defecto\n");
+    //if(salvaFichero(ENTRADAS_CONFIG_FILE, ENTRADAS_CONFIG_BAK_FILE, cad)) Serial.printf("Fichero de configuracion de Entradas creado por defecto\n");
     }      
   return parseaConfiguracionEntradas(cad);
   }
@@ -227,13 +227,13 @@ boolean recuperaDatosSalidas(int debug)
 
   if (debug) Serial.println("Recupero configuracion de archivo...");
   
-  if(!leeFicheroConfig(SALIDAS_CONFIG_FILE, cad)) 
+  if(!leeFichero(SALIDAS_CONFIG_FILE, cad)) 
     {
     //Confgiguracion por defecto
     Serial.printf("No existe fichero de configuracion de Salidas\n");    
     cad="{\"Salidas\": []}";
     //salvo la config por defecto
-    //if(salvaFicheroConfig(SALIDAS_CONFIG_FILE, SALIDAS_CONFIG_BAK_FILE, cad)) Serial.printf("Fichero de configuracion de Salidas creado por defecto\n");
+    //if(salvaFichero(SALIDAS_CONFIG_FILE, SALIDAS_CONFIG_BAK_FILE, cad)) Serial.printf("Fichero de configuracion de Salidas creado por defecto\n");
     }      
     
   return parseaConfiguracionSalidas(cad);
@@ -1086,7 +1086,7 @@ String generaJsonEstadoSalidas(void)
   
   JsonObject& root = jsonBuffer.createObject();
   
-  JsonArray& Salidas = root.createNestedArray("Salidas");
+  JsonArray& Salidas = root.createNestedArray("salidas");
   for(int8_t id=0;id<MAX_SALIDAS;id++)
     {
     if(salidas[id].configurado==CONFIGURADO)
@@ -1097,9 +1097,11 @@ String generaJsonEstadoSalidas(void)
       Salidas_0["pin"] = salidas[id].pin;
       Salidas_0["modo"] = salidas[id].modo;
       Salidas_0["controlador"] = salidas[id].controlador;
-      Salidas_0["valor"] = salidas[id].estado;    
+      Salidas_0["estado"] = salidas[id].estado;    
+      Salidas_0["nombreEstado"] = salidas[id].nombreEstados[salidas[id].estado];
       Salidas_0["anchoPulso"] = salidas[id].anchoPulso;
       Salidas_0["finPulso"] = salidas[id].finPulso;  
+      
       }
     }
     
@@ -1128,7 +1130,7 @@ String generaJsonEstadoEntradas(void)
   
   JsonObject& root = jsonBuffer.createObject();
   
-  JsonArray& Entradas = root.createNestedArray("Entradas");
+  JsonArray& Entradas = root.createNestedArray("entradas");
   for(int8_t id=0;id<MAX_ENTRADAS;id++)
     {
     if(entradas[id].configurada==CONFIGURADO)
@@ -1136,7 +1138,7 @@ String generaJsonEstadoEntradas(void)
       JsonObject& Entradas_0 = Entradas.createNestedObject();
       Entradas_0["id"] = id;
       Entradas_0["nombre"] = entradas[id].nombre;
-      Entradas_0["valor"] = entradas[id].estado;
+      Entradas_0["estado"] = entradas[id].estado;
       }
     }
 
@@ -1169,7 +1171,7 @@ String generaJsonEstado(void)
   
   JsonObject& root = jsonBuffer.createObject();
   
-  JsonArray& Entradas = root.createNestedArray("Entradas");
+  JsonArray& Entradas = root.createNestedArray("entradas");
   for(int8_t id=0;id<MAX_ENTRADAS;id++)
     {
     if(entradas[id].configurada==CONFIGURADO)
@@ -1181,7 +1183,7 @@ String generaJsonEstado(void)
       }
     }
 
-  JsonArray& Salidas = root.createNestedArray("Salidas");
+  JsonArray& Salidas = root.createNestedArray("salidas");
   for(int8_t id=0;id<MAX_SALIDAS;id++)
     {
     if(salidas[id].configurado==CONFIGURADO)

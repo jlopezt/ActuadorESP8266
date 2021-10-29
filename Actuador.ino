@@ -10,13 +10,15 @@
 
 /***************************** Defines *****************************/
 //Defines generales
-#define NOMBRE_FAMILIA   "Actuador/Secuenciador (E/S)"
-#define VERSION          "4.5.2 (ESP8266v2.4.2 OTA|MQTT|Logic+|Secuenciador|eventos SNTP)"
+#define NOMBRE_FAMILIA   "Actuador"
+#define VERSION          "4.6.2" //(ESP8266v3.0.2 OTA|MQTT|Logic+|Secuenciador|eventos SNTP)
 #define SEPARADOR        '|'
 #define SUBSEPARADOR     '#'
 #define KO               -1
 #define OK                0
 #define MAX_VUELTAS      UINT16_MAX// 32767 
+
+#define PUERTO_WEBSERVER 80
 
 /**************************************/
 /*      definiciones de modulos       */
@@ -69,19 +71,18 @@
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
+#include <FS.h>     //this needs to be first, or it all crashes and burns...
 #include <ArduinoOTA.h>
 #include <ArduinoJson.h>
 //#include <WebSocketsServer.h>
 /***************************** Includes *****************************/
 
 /***************************** variables globales *****************************/
-//Indica si el rele se activa con HIGH o LOW
-int nivelActivo;
-
+int nivelActivo;//Indica si el rele se activa con HIGH o LOW
 String nombre_dispositivo;//(NOMBRE_FAMILIA);//Nombre del dispositivo, por defecto el de la familia
 uint16_t vuelta = 0;//MAX_VUELTAS-100; //vueltas de loop
 int debugGlobal=0; //por defecto desabilitado
-boolean candado=false; //Candado de configuracion. true implica que la ultima configuracion fue mal
+time_t anchoLoop= ANCHO_INTERVALO;//inicialmente desactivado el ahorro de energia
 /***************************** variables globales *****************************/
 /************************* FUNCIONES PARA EL BUITIN LED ***************************/
 void configuraLed(void){pinMode(LED_BUILTIN, OUTPUT);}
@@ -114,25 +115,13 @@ void setup()
   Serial.println("*                                                             *");    
   Serial.println("***************************************************************");
 
+  Serial.printf("\nMotivo del reinicio: %s\n",ESP.getResetReason().c_str());
+  
   Serial.printf("\n\nInit Ficheros ---------------------------------------------------------------------\n");
   //Ficheros - Lo primero para poder leer los demas ficheros de configuracion
   inicializaFicheros(debugGlobal);
+  apagaLed();
 
-  //Compruebo si existe candado, si existe la ultima configuracion fue mal
-  if(existeFichero(FICHERO_CANDADO)) 
-    {
-    Serial.printf("Candado puesto. Configuracion por defecto");
-    candado=true; 
-    debugGlobal=1;
-    }
-  else
-    {
-    candado=false;
-    //Genera candado
- /*   if(salvaFichero(FICHERO_CANDADO,"","JSD")) Serial.println("Candado creado");
-    else Serial.println("ERROR - No se pudo crear el candado");*/
-    }
- 
   //Configuracion general
   Serial.printf("\n\nInit General ---------------------------------------------------------------------\n");
   inicializaConfiguracion(debugGlobal);
@@ -163,6 +152,7 @@ void setup()
     //WebSockets
     Serial.println("\n\nInit WebSockets -----------------------------------------------------------------\n");
     inicializaWebSockets();
+    parpadeaLed(4);     
     */
     //mDNS
     Serial.println("\n\nInit mDNS -----------------------------------------------------------------------\n");
@@ -192,10 +182,6 @@ void setup()
   Serial.println("\n\nInit Ordenes ----------------------------------------------------------------------\n");  
   inicializaOrden();//Inicializa los buffers de recepcion de ordenes desde PC
 
-  //Si ha llegado hasta aqui, todo ha ido bien y borro el candado
-  if(borraFichero(FICHERO_CANDADO))Serial.println("Candado borrado");
-  else Serial.println("ERROR - No se pudo borrar el candado");
-  
   compruebaConfiguracion(0);
   parpadeaLed(2);
   apagaLed();//Por si acaso...
@@ -224,7 +210,7 @@ void loop()
   //------------- EJECUCION DE TAREAS --------------------------------------
   //Acciones a realizar en el bucle   
   //Prioridad 0: OTA es prioritario.
-  if ((vuelta % FRECUENCIA_OTA)==0) gestionaOTA(); //Gestion de actualizacion OTA
+  if ((vuelta % FRECUENCIA_OTA)==0) ArduinoOTA.handle(); //Gestion de actualizacion OTA
   //Prioridad 2: Funciones de control.
   if ((vuelta % FRECUENCIA_ENTRADAS)==0) consultaEntradas(debugGlobal); //comprueba las entradas
   if ((vuelta % FRECUENCIA_SALIDAS)==0) actualizaSalidas(debugGlobal); //comprueba las salidas
@@ -266,12 +252,12 @@ boolean inicializaConfiguracion(boolean debug)
   nombre_dispositivo=String(NOMBRE_FAMILIA); //Nombre del dispositivo, por defecto el de la familia
   nivelActivo=LOW;  
   
-  if(!leeFicheroConfig(GLOBAL_CONFIG_FILE, cad))
+  if(!leeFichero(GLOBAL_CONFIG_FILE, cad))
     {
     Serial.printf("No existe fichero de configuracion global\n");
     cad="{\"nombre_dispositivo\": \"" + String(NOMBRE_FAMILIA) + "\",\"NivelActivo\":0}"; //config por defecto    
     //salvo la config por defecto
-    if(salvaFicheroConfig(GLOBAL_CONFIG_FILE, GLOBAL_CONFIG_BAK_FILE, cad)) Serial.printf("Fichero de configuracion global creado por defecto\n"); 
+    if(salvaFichero(GLOBAL_CONFIG_FILE, GLOBAL_CONFIG_BAK_FILE, cad)) Serial.printf("Fichero de configuracion global creado por defecto\n"); 
     }
 
   return parseaConfiguracionGlobal(cad);

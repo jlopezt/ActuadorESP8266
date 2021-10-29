@@ -4,8 +4,6 @@
 /* memoria del modulo esp6288                   */
 /*                                              */
 /************************************************/
-#include <FS.h>     //this needs to be first, or it all crashes and burns...
-//#include <SPIFFS.h> //para el ESP32
 
 /************************************************/
 /* Inicializa el sistema de ficheros del modulo */
@@ -20,28 +18,6 @@ boolean inicializaFicheros(int debug)
     }
   return (true);
 }
-
-/************************************************/
-/* Recupera los datos de configuracion          */
-/* de un archivo, si hay bloqyueo de            */
-/* configuracion, devuelve KO                   */
-/************************************************/
-boolean leeFicheroConfig(String nombre, String &contenido)
-  {
-  if(candado) return false; //la utima configuracion fue mal, los ficheros no valen. Tomamos configuracion pro defecto en todos los modulos
-  return (leeFichero(nombre, contenido));  
-  }
-
-/************************************************/
-/* Salva los datos de configuracion             */
-/* de un archivo, si hay bloqyueo de            */
-/* configuracion, devuelve KO                   */
-/************************************************/
-boolean salvaFicheroConfig(String nombreFichero, String nombreFicheroBak, String contenidoFichero)
-  {
-  if(candado) return false; //la utima configuracion fue mal, los ficheros no valen. Tomamos configuracion pro defecto en todos los modulos
-  return (salvaFichero(nombreFichero, nombreFicheroBak, contenidoFichero));  
-  }
 
 /************************************************/
 /* Recupera los datos de                        */
@@ -126,34 +102,6 @@ boolean salvaFichero(String nombreFichero, String nombreFicheroBak, String conte
   return salvado;
   }
 
-/**********************************************************************/
-/* Salva la cadena pasada al fichero especificado                     */
-/* Si ya existe añade                                                 */
-/**********************************************************************/  
-boolean anadeFichero(String nombreFichero, String contenidoFichero)
-  {
-  boolean salvado=false;
-
-  Serial.print("Nombre fichero: ");
-  Serial.println(nombreFichero.c_str());
-  Serial.print("Contenido fichero: ");
-  Serial.println(contenidoFichero.c_str());
-   
-  File newFile = SPIFFS.open(nombreFichero.c_str(), "a");//abro el fichero, si existe añade
-  if (newFile) 
-    {
-    Serial.printf("Abierto fichero %s.\nGuardo contenido:\n#%s#\n",newFile.name(),contenidoFichero.c_str());
-  
-    newFile.print(contenidoFichero);
-    newFile.close();//cierro el fichero
-    Serial.println("Cierro el fichero");
-    salvado=true;
-    }
-  else Serial.println("El fichero no se pudo abrir para escritura.\n");
-      
-  return salvado;
-  }
-
 /****************************************************/
 /* Borra el fichero especificado                    */
 /****************************************************/  
@@ -195,9 +143,116 @@ boolean listaFicheros(String &contenido)
     contenido += SEPARADOR;
     }
     
-  return (true);
+  return true;
   }  
 
+/**********************************************************************/
+/* Salva la cadena pasada al fichero especificado                     */
+/* Si ya existe añade                                                 */
+/**********************************************************************/  
+boolean anadeFichero(String nombreFichero, String contenidoFichero)
+  {
+  boolean salvado=false;
+
+  Serial.print("Nombre fichero: ");
+  Serial.println(nombreFichero.c_str());
+  Serial.print("Contenido fichero: ");
+  Serial.println(contenidoFichero.c_str());
+   
+  File newFile = SPIFFS.open(nombreFichero.c_str(), "a");//abro el fichero, si existe añade
+  if (newFile) 
+    {
+    Serial.printf("Abierto fichero %s.\nGuardo contenido:\n#%s#\n",newFile.name(),contenidoFichero.c_str());
+  
+    newFile.print(contenidoFichero);
+    newFile.close();//cierro el fichero
+    Serial.println("Cierro el fichero");
+    salvado=true;
+    }
+  else Serial.println("El fichero no se pudo abrir para escritura.\n");
+      
+  return salvado;
+  }
+
+/************************************************/ 
+/* Devuelve el nombre del direcotrio del        */ 
+/* fichro que se pasa como parametro            */ 
+/************************************************/ 
+String directorioFichero(String nombreFichero) 
+  { 
+  if (!nombreFichero.startsWith("/")) nombreFichero="/" + nombreFichero; 
+  String cad=nombreFichero.substring(0,nombreFichero.lastIndexOf("/")); 
+  return(cad); 
+  } 
+ 
+/************************************************/ 
+/* Devuelve si un nombre de fichero incluye     */ 
+/* un directorio por que encuentre mas de una / */ 
+/************************************************/ 
+boolean esDirectorio(String nombre) 
+  { 
+  if(nombre.startsWith("/")) nombre=nombre.substring(1);//si empieza por / se lo quito 
+ 
+  if(nombre.indexOf("/")!=-1) return true; 
+  return false; 
+  } 
+ 
+/************************************************/ 
+/* Recupera los ficheros almacenados en el      */ 
+/* dispositivo. Devuelve una cadena separada    */ 
+/* por SEPARADOR                                */ 
+/************************************************/ 
+String listadoFicheros(String prefix) 
+  {    
+  String salida=""; 
+ 
+  if(!prefix.startsWith("/")) prefix="/" + prefix; 
+ 
+  const size_t capacity = 2*JSON_ARRAY_SIZE(15) + JSON_OBJECT_SIZE(31); 
+  DynamicJsonBuffer jsonBuffer(capacity); 
+ 
+  JsonObject& json = jsonBuffer.createObject(); 
+  json["padre"] = prefix; 
+ 
+  JsonArray& subdirectorios = json.createNestedArray("subdirectorios"); 
+  JsonArray& ficheros = json.createNestedArray("ficheros"); 
+ 
+  Dir root = SPIFFS.openDir(prefix); 
+ 
+  while(root.next()) 
+    { 
+    String fichero=String(root.fileName()); 
+    //Si el nombre incluye el prefix, se lo quito 
+    uint8_t inicio=(fichero.indexOf(prefix)==-1?0:fichero.indexOf(prefix)); 
+    fichero=fichero.substring(inicio+prefix.length()); 
+ 
+    if(esDirectorio(fichero))  
+      { 
+      //verifico que el directorio no este ya en la lista 
+      boolean existe=false; 
+      String subdir=fichero.substring(0,fichero.indexOf("/")); 
+      for(uint8_t i=0;i<subdirectorios.size();i++) 
+        { 
+        if(subdir==subdirectorios[i])  
+          { 
+          existe=true; 
+          break; 
+          } 
+        } 
+      if(!existe) subdirectorios.add(fichero.substring(0,fichero.indexOf("/"))); 
+      } 
+    else  
+      { 
+      JsonObject& fichero_nuevo = ficheros.createNestedObject(); 
+      fichero_nuevo["nombre"] = fichero; 
+      fichero_nuevo["tamano"] = root.fileSize(); 
+      fichero_nuevo["fechaEdicion"] = horaYfecha(root.fileTime()); 
+      } 
+    }    
+  json.printTo(salida); 
+  return (salida); 
+  }   
+ 
 /************************************************/
 /* Devuelve si existe o no un fichero en el     */
 /* dispositivo                                  */
@@ -216,4 +271,23 @@ boolean formatearFS(void)
   {  
   return (SPIFFS.format());
   }
-  
+
+/***************************************************************/ 
+/*                                                             */ 
+/*  Genera una cadena con la hora en formato dd-mm-yy HH:MM:SS */ 
+/*  a partir de la estrucutura time_t que se le pasa           */ 
+/*                                                             */ 
+/***************************************************************/ 
+String horaYfecha(time_t entrada) 
+  { 
+  String cad="";   
+  const char formato[]="%d-%m-%Y %H:%M:%S"; 
+  const uint8_t longitud=20; 
+  char buf[longitud]; 
+ 
+  struct tm* ts = localtime(&entrada); 
+  strftime(buf, sizeof(buf), formato, ts); 
+  buf[longitud-1]=0; 
+ 
+  return (String(buf));     
+  }

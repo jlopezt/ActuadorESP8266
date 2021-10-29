@@ -74,13 +74,13 @@ boolean recuperaDatosSecuenciador(boolean debug)
 
   if (debug) Serial.println("Recupero configuracion de archivo...");
   
-  if(!leeFicheroConfig(SECUENCIADOR_CONFIG_FILE, cad)) 
+  if(!leeFichero(SECUENCIADOR_CONFIG_FILE, cad)) 
     {
     //Confgiguracion por defecto
     Serial.printf("No existe fichero de configuracion del secuenciador\n");
     //cad="{ \"estadoInicial\": 0, \"Planes\":[ {\"id_plan\": 1, \"salida\": 1, \"intervalos\": [{\"id\":  0, \"valor\": 0},{\"id\":  1, \"valor\": 1}, {\"id\":  2, \"valor\": 0}, {\"id\":  3, \"valor\": 1}, {\"id\":  4, \"valor\": 0}, {\"id\":  5, \"valor\": 1}, {\"id\":  6, \"valor\": 0}, {\"id\":  7, \"valor\": 1}, {\"id\":  8, \"valor\": 0}, {\"id\":  9, \"valor\": 1}, {\"id\": 10, \"valor\": 0}, {\"id\": 11, \"valor\": 1},{\"id\":  12, \"valor\": 0},{\"id\":  13, \"valor\": 1}, {\"id\":  14, \"valor\": 0}, {\"id\":  15, \"valor\": 1}, {\"id\":  16, \"valor\": 0}, {\"id\":  17, \"valor\": 1}, {\"id\":  18, \"valor\": 0}, {\"id\":  19, \"valor\": 1}, {\"id\":  20, \"valor\": 0}, {\"id\":  21, \"valor\": 1}, {\"id\": 22, \"valor\": 0}, {\"id\": 23, \"valor\": 1} ] } ] }";
     cad="{\"estadoInicial\": 0,\"Planes\":[]}";
-    //if(salvaFicheroConfig(SECUENCIADOR_CONFIG_FILE, SECUENCIADOR_CONFIG_BAK_FILE, cad)) Serial.printf("Fichero de configuracion del secuenciador creado por defecto\n");
+    //if(salvaFichero(SECUENCIADOR_CONFIG_FILE, SECUENCIADOR_CONFIG_BAK_FILE, cad)) Serial.printf("Fichero de configuracion del secuenciador creado por defecto\n");
     }      
     
   return parseaConfiguracionSecuenciador(cad);
@@ -258,5 +258,34 @@ String pintaPlanHTML(int8_t plan)
     mascara<<=1;
     }  
     
+  return cad;  
+  }
+
+/***********************************************************/
+/*   Devuelve el estado de las entradas en formato json    */
+/***********************************************************/
+String generaJsonEstadoSecuenciador(void){
+  String cad="";
+
+  const size_t bufferSize = JSON_ARRAY_SIZE(5) + JSON_OBJECT_SIZE(2) + 5*JSON_OBJECT_SIZE(4);
+  DynamicJsonBuffer jsonBuffer(bufferSize);
+  
+  JsonObject& root = jsonBuffer.createObject();
+  
+  if(secuenciadorActivo) root["estado"] = 1;
+  else root["estado"]=0;
+
+  JsonArray& _planes = root.createNestedArray("planes");
+  for(int8_t id=0;id<MAX_PLANES;id++){
+    if(planes[id].configurado==CONFIGURADO)
+      {
+      JsonObject& _plan = _planes.createNestedObject(); 
+      _plan["id"] = id;
+      _plan["nombre"] = salidas[planes[id].rele].nombre;
+      _plan["salida"] = planes[id].rele;
+      _plan["estado"] = salidas[planes[id].rele].estado;
+      }
+    }
+  root.printTo(cad);
   return cad;  
   }

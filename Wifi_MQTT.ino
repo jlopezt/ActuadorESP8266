@@ -81,12 +81,12 @@ boolean recuperaDatosMQTT(boolean debug)
   publicarEntradas=1; 
   publicarSalidas=1;    
 
-  if(!leeFicheroConfig(MQTT_CONFIG_FILE, cad))
+  if(!leeFichero(MQTT_CONFIG_FILE, cad))
     {
     //Algo salio mal, Confgiguracion por defecto
     Serial.printf("No existe fichero de configuracion MQTT o esta corrupto\n");
     cad="{\"IPBroker\": \"0.0.0.0\", \"puerto\": 1883, \"timeReconnectMQTT\": 500, \"usuarioMQTT\": \"usuario\", \"passwordMQTT\": \"password\",  \"ID_MQTT\": \"" + String(NOMBRE_FAMILIA) + "\",  \"topicRoot\":  \"" + NOMBRE_FAMILIA + "\", \"publicarEntradas\": 0, \"publicarSalidas\": 0}";
-    //if (salvaFicheroConfig(MQTT_CONFIG_FILE, MQTT_CONFIG_BAK_FILE, cad)) Serial.printf("Fichero de configuracion MQTT creado por defecto\n");    
+    //if (salvaFichero(MQTT_CONFIG_FILE, MQTT_CONFIG_BAK_FILE, cad)) Serial.printf("Fichero de configuracion MQTT creado por defecto\n");    
     }
 
   return parseaConfiguracionMQTT(cad);
@@ -127,7 +127,7 @@ boolean parseaConfiguracionMQTT(String contenido)
 /* Funcion que recibe el mensaje cuando se publica */
 /* en el bus un topic al que esta subscrito        */
 /***************************************************/
-void callbackMQTT(char* topic, byte* payload, unsigned int length)
+void callbackMQTT(char* topic, uint8_t* payload, unsigned int length)
   {
   if(debugGlobal) Serial.printf("Entrando en callback: \n Topic: %s\nPayload %s\nLongitud %i\n", topic, payload, length);
   
@@ -160,7 +160,7 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length)
 /* Funcion que gestiona la respuesta a los mensajes */ 
 /* MQTT menos al Ping                               */
 /****************************************************/
-void respondeGenericoMQTT(char* topic, byte* payload, unsigned int length)
+void respondeGenericoMQTT(char* topic, uint8_t* payload, unsigned int length)
   {  
   char mensaje[length+1];
   
@@ -204,7 +204,7 @@ void respondeGenericoMQTT(char* topic, byte* payload, unsigned int length)
 /***************************************************/
 /* Funcion que gestiona la respuesta al ping MQTT  */
 /***************************************************/
-void respondePingMQTT(char* topic, byte* payload, unsigned int length)
+void respondePingMQTT(char* topic, uint8_t* payload, unsigned int length)
   {  
   char mensaje[length];    
 

@@ -67,7 +67,7 @@ void salvaConfiguracion(void)
   Serial.print("Password : ");
   Serial.println(WiFi.psk());   
 
-  if(!leeFicheroConfig(WIFI_CONFIG_FILE, cad)) Serial.println("No se pudo leer el fichero");
+  if(!leeFichero(WIFI_CONFIG_FILE, cad)) Serial.println("No se pudo leer el fichero");
   cad=generaJsonConfiguracionWifi(cad, WiFi.SSID(),WiFi.psk());
   if(!salvaFichero(WIFI_CONFIG_FILE, WIFI_CONFIG_BAK_FILE, cad)) Serial.println("No se pudo salvar el fichero");  
   Serial.println("---------------------Fin salvando configuracion---------------");
@@ -101,13 +101,13 @@ boolean recuperaDatosWiFi(boolean debug)
   wifiDNS2=IPAddress(0,0,0,0);
   mDNS=NOMBRE_mDNS_CONFIG;
    
-  if(!leeFicheroConfig(WIFI_CONFIG_FILE, cad)) 
+  if(!leeFichero(WIFI_CONFIG_FILE, cad)) 
     {
     //Confgiguracion por defecto
     Serial.printf("No existe fichero de configuracion WiFi o no es valido\n");
     //cad="{\"wifi\": [ {\"ssid\": \"BASE0\" ,\"password\": \"11223344556677889900abcdef\"}, {\"ssid\": \"BASE1\" ,\"password\": \"11223344556677889900abcdef\"}, {\"ssid\": \"BASE2\" ,\"password\": \"11223344556677889900abcdef\"}, {\"ssid\": \"BASE-1\",\"password\": \"11223344556677889900abcdef\"}]}";
     //cad="{\"mDNS\":\"actuador\",\"wifiIP\":\"0.0.0.0\",   \"wifiGW\":\"0.0.0.0\",  \"wifiNet\": \"0.0.0.0\",   \"wifiDNS1\":\"0.0.0.0\",\"wifiDNS2\":\"0.0.0.0\",\"wifi\": []}";
-    //if(salvaFicheroConfig(WIFI_CONFIG_FILE, WIFI_CONFIG_BAK_FILE, cad)) Serial.printf("Fichero de configuracion WiFi creado por defecto\n");
+    //if(salvaFichero(WIFI_CONFIG_FILE, WIFI_CONFIG_BAK_FILE, cad)) Serial.printf("Fichero de configuracion WiFi creado por defecto\n");
     }
 
   return(parseaConfiguracionWifi(cad));

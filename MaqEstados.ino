@@ -116,13 +116,13 @@ boolean recuperaDatosMaquinaEstados(int debug)
 
   if (debug) Serial.println("Recupero configuracion de archivo...");
 
-  if(!leeFicheroConfig(MAQUINAESTADOS_CONFIG_FILE, cad)) 
+  if(!leeFichero(MAQUINAESTADOS_CONFIG_FILE, cad)) 
     {
     //Confgiguracion por defecto
     Serial.printf("No existe fichero de configuracion de la maquina de estados\n");    
     cad="{\"Estados\":[],\"Transiciones\":[] }";
     //salvo la config por defecto
-    //if(salvaFicheroConfig(MAQUINAESTADOS_CONFIG_FILE, MAQUINAESTADOS_CONFIG_BAK_FILE, cad)) Serial.printf("Fichero de configuracion de la maquina de estados creado por defecto\n");
+    //if(salvaFichero(MAQUINAESTADOS_CONFIG_FILE, MAQUINAESTADOS_CONFIG_BAK_FILE, cad)) Serial.printf("Fichero de configuracion de la maquina de estados creado por defecto\n");
     }      
   return parseaConfiguracionMaqEstados(cad);
   }
@@ -334,3 +334,53 @@ int8_t getValorEntradaTransicion(int8_t transicion, int8_t entrada) {return tran
 
 String getNombreEstado(uint8_t estado){return estados[estado].nombre;}
 String getNombreEstadoActual(void){return getNombreEstado(estadoActual);}
+
+/***********************************************************/
+/*                                                         */
+/*   Devuelve el estado de la maquina de estados en        */
+/*   formato json                                          */
+/*   devuelve un json con el formato:                      */
+/* {
+ *  "estado": <estado>,
+ *  "entradas": [  
+      {"id":  "0", "nombre": "P. abierta", "valor": "1" },
+      {"id":  "1", "nombre": "P. cerrada", "valor": "0" }
+    ]
+ *  "salidas": [  
+      {"id":  "0", "nombre": "P. abierta", "valor": "1" },
+      {"id":  "1", "nombre": "P. cerrada", "valor": "0" }
+    ]
+    
+  }
+                                                           */
+/***********************************************************/   
+String generaJsonEstadoMaquinaEstados(void)
+  {
+  String cad="";
+
+  const size_t bufferSize = 2*JSON_ARRAY_SIZE(4) + 9*JSON_OBJECT_SIZE(3);
+  DynamicJsonBuffer jsonBuffer(bufferSize);
+  
+  JsonObject& root = jsonBuffer.createObject();
+  
+  root["estado"] = estados[estadoActual].nombre;
+
+  JsonArray& Entradas = root.createNestedArray("entradas");
+  for(int8_t id=0;id<numeroEntradas;id++){
+    JsonObject& Entradas_0 = Entradas.createNestedObject(); 
+    Entradas_0["id"] = id;
+    Entradas_0["nombre"] = entradas[mapeoEntradas[id]].nombre;
+    Entradas_0["estado"] = entradas[mapeoEntradas[id]].estado;
+  }
+
+  JsonArray& Salidas = root.createNestedArray("salidas");
+  for(int8_t id=0;id<numeroSalidas;id++){
+    JsonObject& Salidas_0 = Salidas.createNestedObject(); 
+    Salidas_0["id"] = id;
+    Salidas_0["nombre"] = salidas[mapeoSalidas[id]].nombre;
+    Salidas_0["estado"] = salidas[mapeoSalidas[id]].estado;
+  }
+
+  root.printTo(cad);
+  return cad;  
+  }

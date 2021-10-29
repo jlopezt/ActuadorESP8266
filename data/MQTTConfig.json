@@ -3,7 +3,7 @@
 "puerto": 1883, 
 "usuarioMQTT": "domoticae", 
 "passwordMQTT": "88716", 
-"ID_MQTT": "Navidad", 
+"ID_MQTT": "Actuador", 
 "topicRoot": "casaPre", 
 "publicarEntradas": 0,
 "publicarSalidas": 1

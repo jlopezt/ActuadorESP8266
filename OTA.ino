@@ -23,10 +23,25 @@ Funcines que provee al libreria:
 **********************************************************************/
 #include <ArduinoOTA.h>
 
-void gestionaOTA(void)
-  {
-   ArduinoOTA.handle();
-   }
+ boolean inicializaOTA(boolean debug)
+  {    
+  //OTA
+  ArduinoOTA.setHostname(nombre_dispositivo.c_str());
+  ArduinoOTA.setPort(8266);
+  ArduinoOTA.setRebootOnSuccess(true);
+  ArduinoOTA.setPassword((const char *)"88716");// No authentication by default
+
+  //Configuramos las funciones CallBack
+  ArduinoOTA.onStart(inicioOTA);
+  ArduinoOTA.onEnd(finOTA);
+  ArduinoOTA.onProgress(progresoOTA);
+  ArduinoOTA.onError(errorOTA);
+  
+  //iniciamos la gestion OTA
+  ArduinoOTA.begin();
+
+  return true;
+  } 
 
 void inicioOTA(void)
   {
@@ -43,10 +58,10 @@ void progresoOTA(unsigned int progress, unsigned int total)
   String cad="";
   float avance=100*(float)progress/total;
 
-  Serial.printf("actualizacion OTA en progreso: %5.1f %%\r",avance);
+  Serial.printf("actualizacion OTA en progreso: %5.1f %  :  ",avance);
   }
 
-void erroresOTA(ota_error_t error)
+void errorOTA(ota_error_t error)
   {
   Serial.printf("Error en actualizacion OTA ");    Serial.printf("Error[%u]: ", error);
   
@@ -55,26 +70,6 @@ void erroresOTA(ota_error_t error)
   else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
   else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
   else if (error == OTA_END_ERROR) Serial.println("End Failed");
+
+  Serial.printf("\n"); 
   }
-
- boolean inicializaOTA(boolean debug)
-  {    
-  //OTA
-  //Sets the device hostname. Default esp32-xxxxxx
-  //ArduinoOTAClass&/void setHostname(const char *hostname);
-  //Sets if the device should be rebooted after successful update. Default true
-  //ArduinoOTAClass&/void setRebootOnSuccess(bool reboot);
-
-  ArduinoOTA.setHostname(nombre_dispositivo.c_str());
-  ArduinoOTA.setRebootOnSuccess(true);
-  ArduinoOTA.setPassword((const char *)"88716");// No authentication by default
-
-  //Configuramos las funciones CallBack
-  ArduinoOTA.onStart(inicioOTA);
-  ArduinoOTA.onEnd(finOTA);
-  ArduinoOTA.onProgress(progresoOTA);
-  ArduinoOTA.onError(erroresOTA);
-  
-  //iniciamos la gestion OTA
-  ArduinoOTA.begin();
-  } 

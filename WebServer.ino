@@ -1,94 +1,81 @@
-/************************************************************************************************
-Servicio                       URL                     Formato entrada Formato salida                                            Comentario                                            Ejemplo peticion              Ejemplo respuesta
-Estado de los reles            http://IP/estado        N/A             <id_0>#<nombre_0>#<estado_0>|<id_1>#<nombre_1>#<estado_1> Devuelve el id de cada rele y su estado               http://IP/estado              1#1|2#0
-Activa rele                    http://IP/activaRele    id=<id>         <id>#<estado>                                             Activa el rele indicado y devuelve el estado leido    http://IP/activaRele?id=1     1|1
-Desactivarele                  http://IP/desactivaRele id=<id>         <id>#<estado>                                             Desactiva el rele indicado y devuelve el estado leido http://IP/desactivaRele?id=0  0|0
-Test                           http://IP/test          N/A             HTML                                                      Verifica el estado del Actuadot   
-Reinicia el actuador           http://IP/restart
-Informacion del Hw del sistema http://IP/info
-************************************************************************************************/
-
 //Configuracion de los servicios web
 #define PUERTO_WEBSERVER 80
-#define ACTIVO    String("#EEEE00")
-#define DESACTIVO String("#AAAAAA")
-//#define ACTIVO    String("#EEEE00")
-//#define DESACTIVO String("#AAAAAA")
+#define IDENTIFICACION "Version " + String(VERSION) + "." + "<BR>"
 #define FONDO     String("#DDDDDD")
 #define TEXTO     String("#000000")
+#define ENCENDIDO String("#FFFF00")
+#define APAGADO   String("#DDDDDD")
 #define ACTIVO    String("#FFFF00")
 #define DESACTIVO String("#DDDDDD")
 
-//Includes
+/*********************************** Includes *****************************************************************/
 #include <ESP8266WebServer.h>
+#include <FS.h>
 
-//Variables globales
+/*********************************** Variables globales *****************************************************************/
 ESP8266WebServer server(PUERTO_WEBSERVER);
 
-//Cadenas HTML precargadas
-String cabeceraHTML="";
-String cabeceraHTMLlight = "";//"<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n<meta charset=\"UTF-8\" />\n<HTML><HEAD><TITLE>" + nombre_dispositivo + " </TITLE></HEAD><BODY>\n";
-String enlaces="<TABLE>\n<CAPTION>Enlaces</CAPTION>\n<TR><TD><a href=\"info\" target=\"_self\">Info</a></TD></TR>\n<TR><TD><a href=\"test\" target=\"_self\">Test</a></TD></TR>\n<TR><TD><a href=\"restart\" target=\"_self\">Restart</a></TD></TR>\n<TR><TD><a href=\"listaFicheros\" target=\"_self\">Lista ficheros</a></TD></TR>\n<TR><TD><a href=\"estado\" target=\"_self\">Estado</a></TD></TR>\n<TR><TD><a href=\"configSalidas\" target=\"_self\">Configuracion salidas</a></TD></TR>\n<TR><TD><a href=\"configEntradas\" target=\"_self\">Configuracion entradas</a></TD></TR>\n<TR><TD><a href=\"planes\" target=\"_self\">Planes del secuenciador</a></TD></TR>\n<TR><TD><a href=\"maquinaEstados\" target=\"_self\">Maquina de estados</a></TD></TR></TABLE>\n"; 
-String pieHTML="</BODY></HTML>";
+const String cabeceraHTMLlight = "<!DOCTYPE html>\n<head>\n<meta charset=\"UTF-8\" />\n<TITLE>Domoticae</TITLE><link rel=\"stylesheet\" type=\"text/css\" href=\"css.css\"></HEAD><html lang=\"es\">\n<BODY>\n"; 
+const String pieHTMLlight="</body>\n</HTML>\n";
 
 /*********************************** Inicializacion y configuracion *****************************************************************/
 void inicializaWebServer(void)
   {
-  //lo inicializo aqui, despues de leer el nombre del dispositivo en la configuracion del cacharro
-  //cabeceraHTML="<HTML><HEAD><TITLE>" + nombre_dispositivo + " </TITLE></HEAD><BODY><h1><a href=\"../\" target=\"_self\">" + nombre_dispositivo + "</a><br></h1>";
-  cabeceraHTMLlight = "<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n<meta charset=\"UTF-8\" />\n<HTML><HEAD><TITLE>" + nombre_dispositivo + " </TITLE></HEAD><BODY>\n";
-  cabeceraHTML = cabeceraHTMLlight + "<h1><a href=\"../\" target=\"_self\">" + nombre_dispositivo + "</a><br></h1>\n";
-
-  /*******Configuracion del Servicio Web***********/  
-  //Inicializo los serivcios  
   //decalra las URIs a las que va a responder
-  server.on("/", handleRoot); //Responde con la iodentificacion del modulo
-  server.on("/estado", handleEstado); //Servicio de estdo de reles
-  server.on("/configSalidas", handleConfigSalidas); //Servicio de estdo de reles
-  server.on("/configEntradas", handleConfigEntradas); //Servicio de estdo de reles    
-  server.on("/activaRele", handleActivaRele); //Servicio de activacion de rele
-  server.on("/desactivaRele", handleDesactivaRele);  //Servicio de desactivacion de rele
-  server.on("/fuerzaManualSalida", handleFuerzaManual);  //Servicio para formar ua salida a modo manual
-  server.on("/recuperaManualSalida", handleRecuperaManual);  //Servicio para formar ua salida a modo manual  
+  server.on("/", HTTP_ANY, handleMain); //layout principal
+  server.on("/estado", HTTP_ANY, handleEstado); //Servicio de estdo de reles
+  server.on("/nombre", HTTP_ANY, handleNombre); //devuelve un JSON con las medidas, reles y modo para actualizar la pagina de datos  
+  server.on("/root", HTTP_ANY, handleRoot); //devuleve el frame con la informacion principal
+    
+  server.on("/estadoEntradas", HTTP_GET, handleEstadoEntradas); //Responde con la identificacion del modulo
+  server.on("/estadoSalidas", HTTP_GET, handleEstadoSalidas); //Responde con la identificacion del modulo
+  server.on("/estadoSecuenciador", HTTP_ANY, handleEstadoSecuenciador);  //Serivico de estado del secuenciador
+  server.on("/estadoMaquinaEstados", HTTP_ANY, handleEstadoMaquinaEstados);  //Servicio de representacion de las transiciones d ela maquina de estados
+
+  server.on("/configSalidas", HTTP_ANY, handleConfigSalidas); //Servicio de estdo de reles
+  server.on("/configEntradas", HTTP_ANY, handleConfigEntradas); //Servicio de estdo de reles    
+  server.on("/activaRele", HTTP_ANY, handleActivaRele); //Servicio de activacion de rele
+  server.on("/desactivaRele", HTTP_ANY, handleDesactivaRele);  //Servicio de desactivacion de rele
+  server.on("/fuerzaManualSalida", HTTP_ANY, handleFuerzaManual);  //Servicio para formar ua salida a modo manual
+  server.on("/recuperaManualSalida", HTTP_ANY, handleRecuperaManual);  //Servicio para formar ua salida a modo manual  
   
-  server.on("/pulsoRele", handlePulsoRele);  //Servicio de pulso de rele
-  server.on("/planes", handlePlanes);  //Servicio de representacion del plan del secuenciador
-  server.on("/activaSecuenciador", handleActivaSecuenciador);  //Servicio para activar el secuenciador
-  server.on("/desactivaSecuenciador", handleDesactivaSecuenciador);  //Servicio para desactivar el secuenciador
-  server.on("/maquinaEstados", handleMaquinaEstados);  //Servicio de representacion de las transiciones d ela maquina de estados
+  server.on("/pulsoRele", HTTP_ANY, handlePulsoRele);  //Servicio de pulso de rele
+  server.on("/planes", HTTP_ANY, handlePlanes);  //Servicio de representacion del plan del secuenciador
+  server.on("/activaSecuenciador", HTTP_ANY, handleActivaSecuenciador);  //Servicio para activar el secuenciador
+  server.on("/desactivaSecuenciador", HTTP_ANY, handleDesactivaSecuenciador);  //Servicio para desactivar el secuenciador
+  server.on("/maquinaEstados", HTTP_ANY, handleMaquinaEstados);  //Servicio de representacion de las transiciones d ela maquina de estados
       
-  server.on("/test", handleTest);  //URI de test
-  server.on("/reset", handleReset);  //URI de test  
-  server.on("/restart", handleRestart);  //URI de test
-  server.on("/info", handleInfo);  //URI de test
+  server.on("/restart", HTTP_ANY, handleRestart);  //URI de test
+  server.on("/info", HTTP_ANY, handleInfo);  //URI de test
   
-  server.on("/listaFicheros", handleListaFicheros);  //URI de leer fichero
-  server.on("/creaFichero", handleCreaFichero);  //URI de crear fichero
-  server.on("/borraFichero", handleBorraFichero);  //URI de borrar fichero
-  server.on("/leeFichero", handleLeeFichero);  //URI de leer fichero
-  server.on("/manageFichero", handleManageFichero);  //URI de leer fichero  
-  server.on("/infoFS", handleInfoFS);  //URI de info del FS
+  server.on("/ficheros", HTTP_ANY, handleFicheros);  //URI de leer fichero      
+  server.on("/listaFicheros", HTTP_ANY, handleListaFicheros);  //URI de leer fichero
+  server.on("/creaFichero", HTTP_ANY, handleCreaFichero);  //URI de crear fichero
+  server.on("/borraFichero", HTTP_ANY, handleBorraFichero);  //URI de borrar fichero
+  server.on("/leeFichero", HTTP_ANY, handleLeeFichero);  //URI de leer fichero
+  server.on("/manageFichero", HTTP_ANY, handleManageFichero);  //URI de leer fichero  
+  server.on("/infoFS", HTTP_ANY, handleInfoFS);  //URI de info del FS
 
   server.on("/datos", handleDatos);
-  server.on("/version", handleVersion);
-  server.on("/listaFicheros2", handleListaFicheros2);
   
-  server.on("/edit.html",  HTTP_POST, []() {  // If a POST request is sent to the /edit.html address,
-                                           server.send(200, "text/plain", ""); 
-                                           }, handleFileUpload);                       // go to 'handleFileUpload'
+ //Uploader
+  server.on("/upload", HTTP_GET, []() {
+    if (!handleFileReadChunked("/upload.html")) {
+      server.send(404, "text/plain", "FileNotFound");
+    }
+  });
+  
+  //first callback is called after the request has ended with all parsed arguments, second callback handles file uploads at that location  
+  server.on("/upload",  HTTP_POST, []() {  // If a POST request is sent to the /upload.html address,
+    server.send(200, "text/plain", "Subiendo..."); 
+  }, handleFileUpload);                       // go to 'handleFileUpload'
 
   server.onNotFound(handleNotFound);//pagina no encontrada
 
   server.begin();
-  
   Serial.println("HTTP server started");
   }
 
-/*******************************************************/
-/*                                                     */ 
-/* Invocado desde Loop, gestiona las peticiones web    */
-/*                                                     */
-/*******************************************************/
 void webServer(int debug)
   {
   server.handleClient();
@@ -96,136 +83,77 @@ void webServer(int debug)
 /********************************* FIn inicializacion y configuracion ***************************************************************/
 
 /************************* Gestores de las diferentes URL coniguradas ******************************/
-/*************************************************/
-/*                                               */
-/*  Pagina principal. informacion de E/S         */
-/*  Enlaces a las principales funciones          */
-/*                                               */
-/*************************************************/  
-void handleRoot() 
+/********************************************************/
+/*  Servicios comunes para actualizar y cargar la web   */
+/********************************************************/    
+void handleMain(){handleFileReadChunked("main.html");}
+
+void handleRoot(){handleFileReadChunked("root.html");}
+
+void handleNombre()
   {
+  const size_t capacity = JSON_OBJECT_SIZE(2);
+  DynamicJsonBuffer jsonBuffer(capacity);
+  
+  JsonObject& root = jsonBuffer.createObject();
+  root["nombreFamilia"] = NOMBRE_FAMILIA;
+  root["nombreDispositivo"] = nombre_dispositivo;
+  root["version"] = VERSION;
+  
   String cad="";
+  root.printTo(cad);
+  server.send(200,"text/json",cad);
+  }
 
-  //genero la respuesta por defecto
-  cad += cabeceraHTML;
-
-  //Entradas  
-  cad += "<TABLE style=\"border: 2px solid black\">\n";
-  cad += "<CAPTION>Entradas</CAPTION>\n";  
-  for(int8_t i=0;i<MAX_ENTRADAS;i++)
-    {
-    if(entradaConfigurada(i)==CONFIGURADO) 
-      {
-      //cad += "<TR><TD>" + nombreEntrada(i) + "-></TD><TD>" + String(nombreEstadoEntrada(i,estadoEntrada(i))) + "</TD></TR>\n";    
-      cad += "<TR>";
-      cad += "<TD STYLE=\"color: " + TEXTO + "; text-align: center; background-color: " + FONDO + "\">" + nombreEntrada(i) + "</TD>";
-      cad += "<TD STYLE=\"color: " + TEXTO + "; text-align: center; background-color: " + String((estadoEntrada(i)==ESTADO_DESACTIVO?DESACTIVO:ACTIVO)) + "; width: 100px\">" + String(nombreEstadoEntrada(i,estadoEntrada(i))) + "</TD>";
-      cad += "</TR>";
-      }
-    }
-  cad += "</TABLE>\n";
-  cad += "<BR>";
+void handleEstado(void)
+  {
+  String cad=generaJsonEstado();
   
-  //Salidas
-  cad += "\n<TABLE style=\"border: 2px solid blue\">\n";
-  cad += "<CAPTION>Salidas</CAPTION>\n";  
-  for(int8_t i=0;i<MAX_SALIDAS;i++)
-    {
-    if(releConfigurado(i)==CONFIGURADO)
-      {      
-      String orden="";
-      if (estadoRele(i)!=ESTADO_DESACTIVO) orden="desactiva"; 
-      else orden="activa";
+  server.send(200, "application/json", cad);   
+   
+  //Serial.println("Medidas requeridas ok");
+  }
 
-      cad += "<TR>\n";
-      cad += "<TD STYLE=\"color: " + TEXTO + "; text-align: center; background-color: " + FONDO + "; width: 100px\">" + nombreRele(i) + "</TD>\n";
-      cad += "<TD STYLE=\"color: " + TEXTO + "; text-align: center; background-color: " + String((estadoRele(i)==ESTADO_DESACTIVO?DESACTIVO:ACTIVO)) + "; width: 100px\">" + String(nombreEstadoSalida(i,estadoSalida(i))) + "</TD>";
-
-      //acciones en funcion del modo
-      switch (modoSalida(i))          
-        {
-        case MODO_MANUAL:
-          //Enlace para activar o desactivar y para generar un pulso
-          cad += "<TD>Manual</TD>\n";
-          cad += "<td>\n";
-          cad += "<form action=\"" + orden + "Rele\">\n";
-          cad += "<input  type=\"hidden\" id=\"id\" name=\"id\" value=\"" + String(i) + "\" >\n";
-          cad += "<input STYLE=\"color: " + TEXTO + "; text-align: center; background-color: " + String((estadoRele(i)==ESTADO_DESACTIVO?ACTIVO:DESACTIVO)) + "; width: 80px\" type=\"submit\" value=\"" + orden + "r\">\n";
-          cad += "</form>\n";
-          cad += "<form action=\"pulsoRele\">\n";
-          cad += "<input  type=\"hidden\" id=\"id\" name=\"id\" value=\"" + String(i) + "\" >\n";
-          cad += "<input STYLE=\"color: " + TEXTO + "; text-align: center; background-color: " + ACTIVO + "; width: 80px\" type=\"submit\" value=\"pulso\">\n";
-          cad += "</form>\n";
-          if(modoInicalSalida(i)!=MODO_MANUAL)
-            {
-            cad += "<form action=\"recuperaManualSalida\">\n";
-            cad += "<input  type=\"hidden\" id=\"id\" name=\"id\" value=\"" + String(i) + "\" >\n";
-            cad += "<input STYLE=\"color: " + TEXTO + "; text-align: center; background-color: " + ACTIVO + "; width: 160px\" type=\"submit\" value=\"recupera automatico\">\n";
-            cad += "</form>\n";
-            }
-          cad += "</td>\n";    
-          break;
-        case MODO_SECUENCIADOR:
-          //cad += "<TD colspan=2> | Secuenciador " + String(controladorSalida(i)) + "</TD>\n";
-          if(estadoSecuenciador())//Si el secuenciador esta on 
-            { 
-            cad += "<TD colspan=2> | Secuenciador " + String(controladorSalida(i)) + "</TD>"; 
-            } 
-          else       
-            { 
-            //Enlace para activar o desactivar 
-            if (estadoRele(i)==1) orden="desactiva"; else orden="activa";//para 0 y 2 (apagado y en pulso) activa 
-            cad += "<TD><a href=\"" + orden + "Rele\?id=" + String(i) + "\" target=\"_self\">" + orden + " rele</a></TD>\n";   
-            //Enlace para generar un pulso 
-            cad += "<TD><a href=\"pulsoRele\?id=" + String(i) + "\" target=\"_self\">Pulso</a></TD>\n"; 
-            }           
-          break;
-        case MODO_SEGUIMIENTO:
-          cad += "<TD>Siguiendo a la entrada " + nombreEntrada(controladorSalida(i)) + "</TD>\n"; //String(controladorSalida(i)) + "</TD>\n";
-          cad += "<td>\n";
-          cad += "<form action=\"fuerzaManualSalida\">\n";
-          cad += "<input  type=\"hidden\" id=\"id\" name=\"id\" value=\"" + String(i) + "\" >\n";
-          cad += "<input STYLE=\"color: " + TEXTO + "; text-align: center; background-color: " + ACTIVO + "; width: 160px\" type=\"submit\" value=\"fuerza manual\">\n";
-          cad += "</form>\n";
-          cad += "</td>\n";    
-          break;
-        case MODO_MAQUINA:
-          cad += "<TD>Controlado por la logica de la maquina de estados. Estado actual: " + getNombreEstadoActual() + "</TD>\n";
-          break;            
-        default://Salida no configurada
-          cad += "<TD>No configurada</TD>\n";
-        }
-      cad += "</TR>\n";        
-      }
-    }
-  cad += "</TABLE>\n";
+/*************************************************/
+/*  Servicio de consulta de estado de            */
+/*  las entradas y devuelve un formato json      */
+/*************************************************/  
+void handleEstadoEntradas(void)
+  {
+  String cad=generaJsonEstadoEntradas();
   
-  //Secuenciadores
-  cad += "<BR><BR>\n";
-  cad += "\n<TABLE style=\"border: 2px solid blue\">\n";
-  cad += "<CAPTION>Secuenciadores</CAPTION>\n";  
-  for(int8_t i=0;i<MAX_PLANES;i++)
-    {
-    if(planConfigurado(i)==CONFIGURADO)
-      {      
-      cad += "<TR>\n";
-      if (estadoSecuenciador()) cad += "<TD><a href=\"desactivaSecuenciador\" \" target=\"_self\">Desactiva secuenciador</TD>";            
-      else cad += "<TD><a href=\"activaSecuenciador\" \" target=\"_self\">Activa secuenciador</TD>";            
-      cad += "</TR>\n";  
-      }
-    }
-  cad += "</TABLE>\n";
-  
-  //Enlaces
-  cad += "<BR><BR>\n";
-  cad += enlaces;
+  server.send(200, "application/json", cad); 
+  }  
 
-  cad += "<BR><BR>" + nombre_dispositivo + " . Version " + String(VERSION) + ".";
-
-  cad += "<BR><BR>Memoria libre: " + String(ESP.getFreeHeap());
+/*************************************************/
+/*  Servicio de consulta de estado de            */
+/*  las Salidas , devuelve un formato json       */
+/*************************************************/  
+void handleEstadoSalidas(void)
+  {
+  String cad=generaJsonEstadoSalidas();
   
-  cad += pieHTML;
-  server.send(200, "text/html", cad);
+  server.send(200, "application/json", cad); 
+  }  
+
+/*********************************************************/
+/*  Servicio de informacion delestado del secuenciador   */
+/*********************************************************/
+void handleEstadoSecuenciador(void)
+  {
+  String cad=generaJsonEstadoSecuenciador();
+
+  server.send(200, "application/json", cad);
+  }
+
+/***********************************************/
+/* Genera el JSON de estado de la Maq. Estados */
+/***********************************************/
+void handleEstadoMaquinaEstados(void)
+  {
+  String cad=generaJsonEstadoMaquinaEstados();
+
+  server.send(200, "application/json", cad);
   }
 
 /*************************************************/
@@ -240,7 +168,7 @@ void handleMaquinaEstados(void)
   String orden="";
 
   //genero la respuesta por defecto
-  cad += cabeceraHTML;
+  cad += cabeceraHTMLlight;
 
   //Estado actual
   cad += "Estado actual: " + getNombreEstadoActual();
@@ -325,23 +253,9 @@ void handleMaquinaEstados(void)
   cad += "</TABLE>";
   cad += "<BR><BR>";
   
-  cad += pieHTML;
+  cad += pieHTMLlight;
   server.send(200, "text/html", cad);
   }
-
-/*************************************************/
-/*                                               */
-/*  Servicio de consulta de estado de            */
-/*  las Salidas y las entradas                   */
-/*  devuelve un formato json                     */
-/*                                               */
-/*************************************************/  
-void handleEstado(void)
-  {
-  String cad=generaJsonEstado();
-  
-  server.send(200, "text/json", cad); 
-  }  
 
 /***************************************************/
 /*                                                 */
@@ -354,7 +268,7 @@ void handleConfigSalidas(void)
   String cad="";
 
   //genero la respuesta por defecto
-  cad += cabeceraHTML;
+  cad += cabeceraHTMLlight;
 
   //Estados
   cad += "<TABLE style=\"border: 2px solid black\">\n";
@@ -400,7 +314,7 @@ void handleConfigSalidas(void)
     }
   cad += "</TABLE>";
 
-  cad += pieHTML;
+  cad += pieHTMLlight;
   server.send(200, "text/HTML", cad);     
 
   //String cad=generaJsonEstadoSalidas();
@@ -419,7 +333,7 @@ void handleConfigEntradas(void)
   String cad="";
 
   //genero la respuesta por defecto
-  cad += cabeceraHTML;
+  cad += cabeceraHTMLlight;
 
   //Estados
   cad += "<TABLE style=\"border: 2px solid black\">\n";
@@ -455,7 +369,7 @@ void handleConfigEntradas(void)
     }
   cad += "</TABLE>";
 
-  cad += pieHTML;
+  cad += pieHTMLlight;
   server.send(200, "text/HTML", cad); 
   }
   
@@ -574,7 +488,7 @@ void handleRecuperaManual(void)
 void handlePlanes(void)
   {
   int8_t numPlanes=getNumPlanes();  
-  String cad=cabeceraHTML;
+  String cad=cabeceraHTMLlight;
   
   cad += "<h1>hay " + String(numPlanes) + " plan(es) activo(s).</h1><BR>";
   
@@ -584,7 +498,7 @@ void handlePlanes(void)
     cad += "<BR><BR>";
     }
   
-  cad += pieHTML;
+  cad += pieHTMLlight;
   server.send(200, "text/html", cad); 
   
   }
@@ -613,54 +527,14 @@ void handleDesactivaSecuenciador(void)
 
 /*********************************************/
 /*                                           */
-/*  Servicio de test                         */
-/*                                           */
-/*********************************************/  
-void handleTest(void)
-  {
-  String cad="";
-
-  cad += cabeceraHTML;
-  cad += "Test OK<br>";
-  cad += pieHTML;
-  server.send(200, "text/html", cad); 
-  }
-
-/*********************************************/
-/*                                           */
-/*  Resetea el dispositivo mediante          */
-/*  peticion HTTP                            */ 
-/*                                           */
-/*********************************************/  
-void handleReset(void)
-  {
-  String cad="";
-
-  cad += cabeceraHTML;
-  
-  cad += "Reseteando...<br>";
-  cad += pieHTML;
-    
-  server.send(200, "text/html", cad);
-  delay(100);     
-  ESP.reset();
-  }
-  
-/*********************************************/
-/*                                           */
 /*  Reinicia el dispositivo mediante         */
 /*  peticion HTTP                            */ 
 /*                                           */
 /*********************************************/  
 void handleRestart(void)
   {
-  String cad="";
-
-  cad += cabeceraHTML;
-  cad += "Reiniciando...<br>";
-  cad += pieHTML;
-  server.send(200, "text/html", cad);     
-  delay(100);
+  handleFileReadChunked("restart.html"); 
+  delay(1000);
   ESP.restart();
   }
 
@@ -671,120 +545,122 @@ void handleRestart(void)
 /*                                           */
 /*********************************************/  
 void handleInfo(void)
-  {
-  String cad=cabeceraHTML;
-
-  cad+= "<BR>-----------------info logica-----------------<BR>";
-  cad += "Hora actual: " + NTP.getTimeDateString(); 
-  cad += "<BR>";  
-  cad += "Primera sincronizacion: " + NTP.getTimeDateString(NTP.getFirstSync()); 
-  cad += "<BR>";  
-  cad += "Ultima sincronizacion: " + NTP.getTimeDateString(NTP.getLastNTPSync()); 
-  cad += "<BR>";  
-  cad += "Ultimo evento SNTP: " + lastEvent; 
-  cad += "<BR>";  
-  
-  cad += "IP: " + String(getIP(debugGlobal));
-  cad += "<BR>";  
-  cad += "nivelActivo: " + String(nivelActivo);
-  cad += "<BR>";  
-  for(int8_t i=0;i<MAX_SALIDAS;i++)
-    {
-    cad += "Rele " + String(i) + " nombre: " + nombreRele(i) + "| estado: " + estadoRele(i);    
-    cad += "<BR>";   
-    }
-  cad += "-----------------------------------------------<BR>"; 
-  
-  cad += "<BR>-----------------WiFi info-----------------<BR>";
-  cad += "SSID: " + nombreSSID();
-  cad += "<BR>";    
-  cad += "IP: " + WiFi.localIP().toString();
-  cad += "<BR>";    
-  cad += "Potencia: " + String(WiFi.RSSI());
-  cad += "<BR>";    
+  { 
+  String cad=cabeceraHTMLlight; 
+ 
+  cad+= "<BR>-----------------info logica-----------------<BR>"; 
+  cad += "Hora actual: " + NTP.getTimeDateString();  
+  cad += "<BR>";   
+  cad += "Primera sincronizacion: " + NTP.getTimeDateString(NTP.getFirstSync());  
+  cad += "<BR>";   
+  cad += "Ultima sincronizacion: " + NTP.getTimeDateString(NTP.getLastNTPSync());  
+  cad += "<BR>";   
+  cad += "Ultimo evento SNTP: " + lastEvent;  
+  cad += "<BR>";   
+   
+  cad += "IP: " + String(getIP(debugGlobal)); 
+  cad += "<BR>";   
+  cad += "nivelActivo: " + String(nivelActivo); 
+  cad += "<BR>";   
+  for(int8_t i=0;i<MAX_SALIDAS;i++) 
+    { 
+    cad += "Rele " + String(i) + " nombre: " + nombreRele(i) + "| estado: " + estadoRele(i);     
+    cad += "<BR>";    
+    } 
   cad += "-----------------------------------------------<BR>";  
-/*
-  cad += "<BR>-----------------MQTT info-----------------<BR>";
-  cad += "IP broker: " + IPBroker.toString();
-  cad += "<BR>";
-  cad += "Puerto broker: " +   puertoBroker=0;
-  cad += "<BR>";  
-  cad += "Usuario: " + usuarioMQTT="";
-  cad += "<BR>";  
-  cad += "Password: " + passwordMQTT="";
-  cad += "<BR>";  
-  cad += "Topic root: " + topicRoot="";
-  cad += "<BR>";  
-  cad += "-----------------------------------------------<BR>";  
-*/    
-  cad += "<BR>-----------------Hardware info-----------------<BR>";
-  cad += "Vcc: " + String(ESP.getVcc());
-  cad += "<BR>";  
-  cad += "FreeHeap: " + String(ESP.getFreeHeap());
-  cad += "<BR>";
-  cad += "ChipId: " + String(ESP.getChipId());
-  cad += "<BR>";  
-  cad += "SdkVersion: " + String(ESP.getSdkVersion());
-  cad += "<BR>";  
-  cad += "CoreVersion: " + ESP.getCoreVersion();
-  cad += "<BR>";  
-  cad += "FullVersion: " + ESP.getFullVersion();
-  cad += "<BR>";  
-  cad += "BootVersion: " + String(ESP.getBootVersion());
-  cad += "<BR>";  
-  cad += "BootMode: " + String(ESP.getBootMode());
-  cad += "<BR>";  
-  cad += "CpuFreqMHz: " + String(ESP.getCpuFreqMHz());
-  cad += "<BR>";  
-  cad += "FlashChipId: " + String(ESP.getFlashChipId());
-  cad += "<BR>";  
-     //gets the actual chip size based on the flash id
-  cad += "FlashChipRealSize: " + String(ESP.getFlashChipRealSize());
-  cad += "<BR>";  
-     //gets the size of the flash as set by the compiler
-  cad += "FlashChipSize: " + String(ESP.getFlashChipSize());
-  cad += "<BR>";  
-  cad += "FlashChipSpeed: " + String(ESP.getFlashChipSpeed());
-  cad += "<BR>";  
-     //FlashMode_t ESP.getFlashChipMode());
-  cad += "FlashChipSizeByChipId: " + String(ESP.getFlashChipSizeByChipId());  
-  cad += "<BR>";  
-  cad += "-----------------------------------------------<BR>";  
+   
+  cad += "<BR>-----------------WiFi info-----------------<BR>"; 
+  cad += "SSID: " + nombreSSID(); 
+  cad += "<BR>";     
+  cad += "IP: " + WiFi.localIP().toString(); 
+  cad += "<BR>";     
+  cad += "Potencia: " + String(WiFi.RSSI()); 
+  cad += "<BR>";     
+  cad += "-----------------------------------------------<BR>";   
+/* 
+  cad += "<BR>-----------------MQTT info-----------------<BR>"; 
+  cad += "IP broker: " + IPBroker.toString(); 
+  cad += "<BR>"; 
+  cad += "Puerto broker: " +   puertoBroker=0; 
+  cad += "<BR>";   
+  cad += "Usuario: " + usuarioMQTT=""; 
+  cad += "<BR>";   
+  cad += "Password: " + passwordMQTT=""; 
+  cad += "<BR>";   
+  cad += "Topic root: " + topicRoot=""; 
+  cad += "<BR>";   
+  cad += "-----------------------------------------------<BR>";   
+*/     
+  cad += "<BR>-----------------Hardware info-----------------<BR>"; 
+  cad += "Vcc: " + String(ESP.getVcc()); 
+  cad += "<BR>";   
+  cad += "FreeHeap: " + String(ESP.getFreeHeap()); 
+  cad += "<BR>"; 
+  cad += "ChipId: " + String(ESP.getChipId()); 
+  cad += "<BR>";   
+  cad += "SdkVersion: " + String(ESP.getSdkVersion()); 
+  cad += "<BR>";   
+  cad += "CoreVersion: " + ESP.getCoreVersion(); 
+  cad += "<BR>";   
+  cad += "FullVersion: " + ESP.getFullVersion(); 
+  cad += "<BR>";   
+  cad += "BootVersion: " + String(ESP.getBootVersion()); 
+  cad += "<BR>";   
+  cad += "BootMode: " + String(ESP.getBootMode()); 
+  cad += "<BR>";   
+  cad += "CpuFreqMHz: " + String(ESP.getCpuFreqMHz()); 
+  cad += "<BR>";   
+  cad += "FlashChipId: " + String(ESP.getFlashChipId()); 
+  cad += "<BR>";   
+     //gets the actual chip size based on the flash id 
+  cad += "FlashChipRealSize: " + String(ESP.getFlashChipRealSize()); 
+  cad += "<BR>";   
+     //gets the size of the flash as set by the compiler 
+  cad += "FlashChipSize: " + String(ESP.getFlashChipSize()); 
+  cad += "<BR>";   
+  cad += "FlashChipSpeed: " + String(ESP.getFlashChipSpeed()); 
+  cad += "<BR>";   
+     //FlashMode_t ESP.getFlashChipMode()); 
+  cad += "FlashChipSizeByChipId: " + String(ESP.getFlashChipSizeByChipId());   
+  cad += "<BR>";   
+  cad += "-----------------------------------------------<BR>";   
+ 
+  cad += "<BR>-----------------info fileSystem-----------------<BR>";    
+  FSInfo fs_info; 
+  if(SPIFFS.info(fs_info))  
+    { 
+    /*         
+     struct FSInfo { 
+        size_t totalBytes; 
+        size_t usedBytes; 
+        size_t blockSize; 
+        size_t pageSize; 
+        size_t maxOpenFiles; 
+        size_t maxPathLength; 
+    }; 
+     */ 
+    cad += "totalBytes: "; 
+    cad += fs_info.totalBytes; 
+    cad += "<BR>usedBytes: "; 
+    cad += fs_info.usedBytes; 
+    cad += "<BR>blockSize: "; 
+    cad += fs_info.blockSize; 
+    cad += "<BR>pageSize: "; 
+    cad += fs_info.pageSize;     
+    cad += "<BR>maxOpenFiles: "; 
+    cad += fs_info.maxOpenFiles; 
+    cad += "<BR>maxPathLength: "; 
+    cad += fs_info.maxPathLength; 
+    } 
+  else cad += "Error al leer info"; 
+  cad += "<BR>-----------------------------------------------<BR>";  
+   
+  cad += pieHTMLlight; 
+  server.send(200, "text/html", cad);      
+  } 
+/**********************************************************************/
 
-  cad += "<BR>-----------------info fileSystem-----------------<BR>";   
-  FSInfo fs_info;
-  if(SPIFFS.info(fs_info)) 
-    {
-    /*        
-     struct FSInfo {
-        size_t totalBytes;
-        size_t usedBytes;
-        size_t blockSize;
-        size_t pageSize;
-        size_t maxOpenFiles;
-        size_t maxPathLength;
-    };
-     */
-    cad += "totalBytes: ";
-    cad += fs_info.totalBytes;
-    cad += "<BR>usedBytes: ";
-    cad += fs_info.usedBytes;
-    cad += "<BR>blockSize: ";
-    cad += fs_info.blockSize;
-    cad += "<BR>pageSize: ";
-    cad += fs_info.pageSize;    
-    cad += "<BR>maxOpenFiles: ";
-    cad += fs_info.maxOpenFiles;
-    cad += "<BR>maxPathLength: ";
-    cad += fs_info.maxPathLength;
-    }
-  else cad += "Error al leer info";
-  cad += "<BR>-----------------------------------------------<BR>"; 
-  
-  cad += pieHTML;
-  server.send(200, "text/html", cad);     
-  }
-
+/************************* FICHEROS *********************************************/
 /*********************************************/
 /*                                           */
 /*  Crea un fichero a traves de una          */
@@ -796,9 +672,6 @@ void handleCreaFichero(void)
   String cad="";
   String nombreFichero="";
   String contenidoFichero="";
-  boolean salvado=false;
-
-  cad += cabeceraHTML;
 
   if(server.hasArg("nombre") && server.hasArg("contenido")) //si existen esos argumentos
     {
@@ -806,16 +679,16 @@ void handleCreaFichero(void)
     contenidoFichero=server.arg("contenido");
 
     if(salvaFichero( nombreFichero, nombreFichero+".bak", contenidoFichero)) 
-	  {
-	  //cad += "Fichero salvado con exito<br>";
-	  handleListaFicheros();
-	  return;
-	  }
+      {
+      String cad=directorioFichero(nombreFichero);
+      server.sendHeader("Location", "ficheros?dir=" + cad,true); 
+      server.send(302, "text/html","");        
+      return;
+      }  
     else cad += "No se pudo salvar el fichero<br>"; 
     }
   else cad += "Falta el argumento <nombre de fichero>"; 
 
-  cad += pieHTML;
   server.send(200, "text/html", cad); 
   }
 
@@ -831,23 +704,21 @@ void handleBorraFichero(void)
   String contenidoFichero="";
   String cad="";
 
-  cad += cabeceraHTML;
-  
   if(server.hasArg("nombre") ) //si existen esos argumentos
     {
     nombreFichero=server.arg("nombre");
 
     if(borraFichero(nombreFichero)) 
       {
-      //cad += "El fichero " + nombreFichero + " ha sido borrado.\n";
-      handleListaFicheros();
+      String cad=directorioFichero(nombreFichero);
+      server.sendHeader("Location", "ficheros?dir=" + cad,true); 
+      server.send(302, "text/html","");       
       return;
       }
     else cad += "No sepudo borrar el fichero " + nombreFichero + ".\n"; 
     }
   else cad += "Falta el argumento <nombre de fichero>"; 
 
-  cad += pieHTML;
   server.send(200, "text/html", cad); 
   }
 
@@ -859,7 +730,7 @@ void handleBorraFichero(void)
 /*********************************************/  
 void handleLeeFichero(void)
   {
-  String cad=cabeceraHTML;
+  String cad="";
   String nombreFichero="";
   String contenido="";
    
@@ -882,9 +753,121 @@ void handleLeeFichero(void)
     }
   else cad += "Falta el argumento <nombre de fichero>"; 
 
-  cad += pieHTML;
   server.send(200, "text/html", cad); 
   }
+
+/*********************************************/
+/*                                           */
+/*  Habilita la edicion y borrado del        */
+/*  fichero indicado, a traves de una        */
+/*  peticion HTTP                            */ 
+/*                                           */
+/*********************************************/ 
+void handleManageFichero(void)
+  {
+  String nombreFichero="";
+  String contenido="";
+  String cad=cabeceraHTMLlight;
+
+  if(server.hasArg("nombre") ) //si existen esos argumentos
+    {
+    nombreFichero=server.arg("nombre");
+          
+    if (!server.chunkedResponseModeStart(200, "text/html")) {
+      server.send(505, F("text/html"), F("HTTP1.1 required"));
+      return;
+      }     
+
+    cad += "<form id=\"borrarFichero\" action=\"/borraFichero\">\n";
+    cad += "  <input type=\"hidden\" name=\"nombre\" value=\"" + nombreFichero + "\">\n";
+    cad += "</form>\n";
+
+    cad += "<form id=\"salvarFichero\" action=\"creaFichero\" target=\"_self\">\n";
+    cad += "  <input type=\"hidden\" name=\"nombre\" value=\"" + nombreFichero + "\">\n";
+    cad += "</form>\n";
+
+    cad += "<form id=\"volver\" action=\"ficheros\" target=\"_self\">\n";
+    cad += "  <input type=\"hidden\" name=\"dir\" value=\"" + directorioFichero(nombreFichero) + "\">\n";
+    cad += "</form>\n";
+
+    cad += "<div id=\"contenedor\" style=\"width:900px;\">\n";
+    cad += "  <p align=\"center\" style=\"margin-top: 0px;font-size: 16px; background-color: #83aec0; background-repeat: repeat-x; color: #FFFFFF; font-family: Trebuchet MS, Arial; text-transform: uppercase;\">Fichero: " + nombreFichero + "(" + contenido.length() + ")</p>\n";
+    cad += "  <BR>\n";
+    cad += "  <table width='100%'><tr>\n"; 
+    cad += "  <td align='left'><button form=\"salvarFichero\" type=\"submit\" value=\"Submit\">Salvar</button></td>\n";  
+    cad += "  <td align='center'><button form=\"borrarFichero\" type=\"submit\" value=\"Submit\">Borrar</button></td>\n";        
+    cad += "  <td align='right'><button form=\"volver\" type=\"submit\" value=\"Submit\">Atras</button></td>\n";  
+    cad += "  </tr></table>\n";       
+    cad += "  <BR><BR>\n";
+    cad += "  <textarea form=\"salvarFichero\" cols=120 rows=45 name=\"contenido\">\n";
+    server.sendContent(cad);
+
+    if (SPIFFS.exists(nombreFichero))
+      {
+      const uint16_t buffSize=1000;  
+      File file = SPIFFS.open(nombreFichero, "r");    
+      Serial.printf("El fichero %s existe\n",nombreFichero.c_str());
+
+      char *buff=(char *)malloc(buffSize);      
+      if(buff==NULL){
+          Serial.printf("Error en chunk\n"); 
+          server.sendContent(String("Error al reservar memoria"));
+          }
+      else{
+        Serial.printf("Iniciando While...\n");
+        uint16_t tamano=file.size();
+        uint16_t leido=0;
+        while(leido<tamano){
+          uint16_t tam=tamano-leido;
+          if(tam>buffSize) tam=buffSize;
+          leido+=file.readBytes(buff,tam);
+          server.sendContent(buff,tam);   
+          Serial.printf("tama�o: %i | leido: %i | tam: %i\n",tamano,leido, tam);   
+          }          
+        free(buff);
+        }
+      file.close();
+      }
+    else server.sendContent(String("Error al abrir el fichero " + nombreFichero));
+
+    cad  = "\n</textarea>\n";
+    cad += "</div>\n";
+    cad += pieHTMLlight;
+    server.sendContent(cad);
+    server.chunkedResponseFinalize();
+    return;
+    }
+  else cad += "Falta el argumento <nombre de fichero>"; 
+
+  cad += pieHTMLlight;
+  server.send(200, "text/html", cad);
+  }
+
+/*********************************************/
+/*                                           */
+/*  Lista los ficheros en el sistema a       */
+/*  traves de una peticion HTTP              */ 
+/*                                           */
+/*********************************************/  
+void handleListaFicheros(void)
+  {
+  String prefix="/";  
+
+  if(server.hasArg("dir")) prefix=server.arg("dir");
+
+  server.send(200,"text/json",listadoFicheros(prefix));
+  }
+
+void handleFicheros(void)
+  {
+  String prefix="/";  
+
+  if(server.hasArg("dir")) prefix=server.arg("dir");
+
+  server.sendHeader("Location","ficheros.html?dir=" + prefix, true);      
+  server.send(302);  
+  }
+/**********************************************************************/
 
 /*********************************************/
 /*                                           */
@@ -894,9 +877,9 @@ void handleLeeFichero(void)
 /*********************************************/  
 void handleInfoFS(void)
   {
-  String cad="";
+  String cad=cabeceraHTMLlight;
 
-  cad += cabeceraHTML;
+  cad += IDENTIFICACION;
   
   //inicializo el sistema de ficheros
   if (SPIFFS.begin()) 
@@ -933,7 +916,7 @@ void handleInfoFS(void)
     Serial.println("unmounted file system\n---------------------------------------------------------------");
     }//La de abrir el sistema de ficheros
 
-  cad += pieHTML;
+  cad += pieHTMLlight;
   server.send(200, "text/html", cad); 
   }
 
@@ -944,11 +927,11 @@ void handleInfoFS(void)
 /*********************************************/
 void handleNotFound()
   {
-  if(handleFileRead(server.uri()))return;
+  if(handleFileReadChunked(server.uri()))return;
     
-  String message = "";
+  String message = "";//"<h1>" + String(NOMBRE_FAMILIA) + "<br></h1>";
 
-  message = cabeceraHTML; //"<h1>" + nombre_dispositivo + "<br></h1>";
+  message = "<h1>" + String(NOMBRE_FAMILIA) + "<br></h1>";
   message += "File Not Found\n\n";
   message += "URI: ";
   message += server.uri();
@@ -966,149 +949,54 @@ void handleNotFound()
   server.send(404, "text/html", message);
   }
 
-/*********************************************/
-/*                                           */
-/*  Habilita la edicion y borrado de los     */
-/*  ficheros en el sistema a traves de una   */
-/*  peticion HTTP                            */ 
-/*                                           */
-/*********************************************/ 
-void handleManageFichero(void)
-  {
-  String nombreFichero="";
-  String contenido="";
-  String cad="";
-
-  cad += cabeceraHTML;
-  cad += "<h1>" + nombre_dispositivo + "</h1>";
-  
-  if(server.hasArg("nombre") ) //si existen esos argumentos
-    {
-    nombreFichero=server.arg("nombre");
-    cad += "<h2>Fichero: " + nombreFichero + "</h2><BR>";  
-
-    if(leeFichero(nombreFichero, contenido))
-      {
-      cad += "El fichero tiene un tama&ntilde;o de ";
-      cad += contenido.length();
-      cad += " bytes.<BR>";
-      cad += "El contenido del fichero es:<BR>";
-      cad += "<textarea readonly=true cols=100 rows=20 name=\"contenido\">";
-      cad += contenido;
-      cad += "</textarea>";
-      cad += "<BR>";
-
-      cad += "<table><tr><td>";
-      cad += "<form action=\"borraFichero\" target=\"_self\">";
-      cad += "  <p>";
-      cad += "    <input type=\"hidden\" name=\"nombre\" value=\"" + nombreFichero + "\">";
-      cad += "    <input type=\"submit\" value=\"borrar\">";
-      cad += "  </p>";
-      cad += "</form>";
-      cad += "</td></tr></table>";
-      
-      cad += "<table>Modificar fichero<tr><td>";      
-      cad += "<form action=\"creaFichero\" target=\"_self\">";
-      cad += "  <p>";
-      cad += "    <input type=\"hidden\" name=\"nombre\" value=\"" + nombreFichero + "\">";
-      cad += "    contenido del fichero: <br><textarea cols=100 rows=20 name=\"contenido\">" + contenido + "</textarea>";
-      cad += "    <BR>";
-      cad += "    <input type=\"submit\" value=\"salvar\">";
-      cad += "  </p>";
-      cad += "</td></tr></table>";
-      }
-    else cad += "Error al abrir el fichero " + nombreFichero + "<BR>";
-    }
-  else cad += "Falta el argumento <nombre de fichero>"; 
-
-  cad += pieHTML;
-  server.send(200, "text/html", cad); 
-  }
-
-/*********************************************/
-/*                                           */
-/*  Lista los ficheros en el sistema a       */
-/*  traves de una peticion HTTP              */ 
-/*                                           */
-/*********************************************/  
-void handleListaFicheros(void)
-  {
-  String nombreFichero="";
-  String contenidoFichero="";
-  boolean salvado=false;
-  String cad="";
-
-  cad += cabeceraHTML;
-  
-  //Variables para manejar la lista de ficheros
-  String contenido="";
-  String fichero="";  
-  int16_t to=0;
-  
-  if(listaFicheros(contenido)) 
-    {
-    Serial.printf("contenido inicial= %s\n",contenido.c_str());      
-    //busco el primer separador
-    to=contenido.indexOf(SEPARADOR); 
-
-    cad +="<style> table{border-collapse: collapse;} th, td{border: 1px solid black; padding: 10px; text-align: left;}</style>";
-    cad += "<TABLE>";
-    while(to!=-1)
-      {
-      fichero=contenido.substring(0, to);//cojo el principio como el fichero
-      contenido=contenido.substring(to+1); //la cadena ahora es desde el separador al final del fichero anterior
-      to=contenido.indexOf(SEPARADOR); //busco el siguiente separador
-
-      cad += "<TR><TD>" + fichero + "</TD>";           
-      cad += "<TD>";
-      cad += "<form action=\"manageFichero\" target=\"_self\">";
-      cad += "    <input type=\"hidden\" name=\"nombre\" value=\"" + fichero + "\">";
-      cad += "    <input type=\"submit\" value=\"editar\">";
-      cad += "</form>";
-      cad += "</TD><TD>";
-      cad += "<form action=\"borraFichero\" target=\"_self\">";
-      cad += "    <input type=\"hidden\" name=\"nombre\" value=\"" + fichero + "\">";
-      cad += "    <input type=\"submit\" value=\"borrar\">";
-      cad += "</form>";
-      cad += "</TD></TR>";
-      }
-    cad += "</TABLE>\n";
-    cad += "<BR>";
-    
-    //Para crear un fichero nuevo
-    cad += "<h2>Crear un fichero nuevo:</h2>";
-    cad += "<table><tr><td>";      
-    cad += "<form action=\"creaFichero\" target=\"_self\">";
-    cad += "  <p>";
-    cad += "    Nombre:<input type=\"text\" name=\"nombre\" value=\"\">";
-    cad += "    <BR>";
-    cad += "    Contenido:<br><textarea cols=75 rows=20 name=\"contenido\"></textarea>";
-    cad += "    <BR>";
-    cad += "    <input type=\"submit\" value=\"salvar\">";
-    cad += "  </p>";
-    cad += "</td></tr></table>";      
-    }
-  else cad += "<TR><TD>No se pudo recuperar la lista de ficheros</TD></TR>"; 
-
-  cad += pieHTML;
-  server.send(200, "text/html", cad); 
-  }
-
 /**********************************************************************/
 String getContentType(String filename) { // determine the filetype of a given filename, based on the extension
-  if (filename.endsWith(".html")) return "text/html";
+  if (server.hasArg("download")) return "application/octet-stream";
+  else if (filename.endsWith(".htm")) return "text/html";
+  else if (filename.endsWith(".html")) return "text/html";
   else if (filename.endsWith(".css")) return "text/css";
   else if (filename.endsWith(".js")) return "application/javascript";
+  else if (filename.endsWith(".png")) return "image/png";
+  else if (filename.endsWith(".gif")) return "image/gif";
+  else if (filename.endsWith(".jpg")) return "image/jpeg";
   else if (filename.endsWith(".ico")) return "image/x-icon";
+  else if (filename.endsWith(".xml")) return "text/xml";
+  else if (filename.endsWith(".pdf")) return "application/x-pdf";
+  else if (filename.endsWith(".zip")) return "application/x-zip";
   else if (filename.endsWith(".gz")) return "application/x-gzip";
   return "text/plain";
 }
 
 bool handleFileRead(String path) 
   { // send the right file to the client (if it exists)
-  Serial.println("handleFileRead: " + path);
+  //Serial.println("handleFileRead: " + path);
   
-  if (!path.startsWith("/")) path += "/";
+  if (!path.startsWith("/")) path = "/" + path;
+  path = "/www" + path; //busco los ficheros en el SPIFFS en la carpeta www
+  //if (!path.endsWith("/")) path += "/";
+  
+  String contentType = getContentType(path);
+  String pathWithGz = path + ".gz";
+  if (SPIFFS.exists(pathWithGz) || SPIFFS.exists(path)) 
+    {
+    if (SPIFFS.exists(pathWithGz)) path += ".gz";
+
+    File file = SPIFFS.open(path, "r");                    // Open the file
+    size_t sent = server.streamFile(file, contentType);    // Send it to the client
+    file.close();                                          // Close the file again
+    //Serial.println(String("\tSent file: ") + path);
+    return true;
+    }
+  //Serial.println(String("\tFile Not Found: ") + path);   // If the file doesn't exist, return false
+  return false;
+  }
+
+bool handleFileReadChunked(String path) 
+  { // send the right file to the client (if it exists)
+  const uint16_t buffSize=1000;
+  Serial.println("handleFileReadChunked: " + path);
+  
+  if (!path.startsWith("/")) path = "/" + path;
   path = "/www" + path; //busco los ficheros en el SPIFFS en la carpeta www
   //if (!path.endsWith("/")) path += "/";
   
@@ -1119,7 +1007,29 @@ bool handleFileRead(String path)
     if (SPIFFS.exists(pathWithGz))                         // If there's a compressed version available
       path += ".gz";                                         // Use the compressed verion
     File file = SPIFFS.open(path, "r");                    // Open the file
-    size_t sent = server.streamFile(file, contentType);    // Send it to the client
+
+    //Inicio el chunked************************
+    //size_t sent = server.streamFile(file, contentType);    // Send it to the client
+    uint16_t tamano=file.size();
+    uint16_t leido=0;
+    char *buff=(char *)malloc(buffSize);
+    
+    if(buff==NULL){printf("Error en chunk\n"); return false;}
+    if (!server.chunkedResponseModeStart(200, contentType)) {
+      server.send(505, F("text/html"), F("HTTP1.1 required"));
+      return false;
+    }    
+    
+    while(leido<tamano){
+      uint16_t tam=tamano-leido;
+      if(tam>buffSize) tam=buffSize;
+      leido+=file.readBytes(buff,tam);
+      server.sendContent(buff,tam);   
+      Serial.printf("tama�o: %i | leido: %i | tam: %i\n",tamano,leido, tam);   
+    }
+    server.chunkedResponseFinalize();
+    free(buff);
+    //Fin del chunked*************************
     file.close();                                          // Close the file again
     Serial.println(String("\tSent file: ") + path);
     return true;
@@ -1130,43 +1040,41 @@ bool handleFileRead(String path)
 
 void handleFileUpload()
   {
-  File fsUploadFile;
+  String path = "";
+  static File fsUploadFile;
   HTTPUpload& upload = server.upload();
-  String path;
- 
+
+  //Serial.printf("Vamos a subir un fichero...");
   if(upload.status == UPLOAD_FILE_START)
     {
-    path = upload.filename;
-    if(!path.startsWith("/")) path = "/"+path;
-    if(!path.startsWith("/www")) path = "/www"+path;
-    if(!path.endsWith(".gz")) 
-      {                          // The file server always prefers a compressed version of a file 
-      String pathWithGz = path+".gz";                    // So if an uploaded file is not compressed, the existing compressed
-      if(SPIFFS.exists(pathWithGz))                      // version of that file must be deleted (if it exists)
-         SPIFFS.remove(pathWithGz);
-      }
-      
-    Serial.print("handleFileUpload Name: "); Serial.println(path);
-    fsUploadFile = SPIFFS.open(path, "w");            // Open the file for writing in SPIFFS (create if it doesn't exist)
-    path = String();
+    if(server.hasArg("directorio"))path=server.arg("directorio");
+    if(!path.startsWith("/")) path = "/" + path;
+    if(!upload.filename.startsWith("/")) path = path + "/";
+    path += upload.filename;    
+    
+    Serial.printf("handleFileUpload Name: [%s]\n",path.c_str());
+    fsUploadFile = SPIFFS.open(path.c_str(), "w");            // Open the file for writing in SPIFFS (create if it doesn't exist)
+    if(!fsUploadFile) Serial.printf("Error al crear el fichero\n");
     }
   else if(upload.status == UPLOAD_FILE_WRITE)
     {
     if(fsUploadFile) fsUploadFile.write(upload.buf, upload.currentSize); // Write the received bytes to the file
+    else Serial.printf("Error al escribir en el fichero\n");
     } 
   else if(upload.status == UPLOAD_FILE_END)
     {
-    if(fsUploadFile) 
-      {                                    // If the file was successfully created
+    String mensaje="";  
+
+    if(fsUploadFile) // If the file was successfully created
+      {                                    
       fsUploadFile.close();                               // Close the file again
-      Serial.print("handleFileUpload Size: "); Serial.println(upload.totalSize);
-      server.sendHeader("Location","/success.html");      // Redirect the client to the success page
-      server.send(303);
+      Serial.printf("handleFileUpload Size: %i", upload.totalSize);
+      mensaje="Fichero subido con exito (" + String(upload.totalSize) + "bytes)";  
       }
-    else 
-      {
-      server.send(500, "text/plain", "500: couldn't create file");
-      }
+    else mensaje="Se produjo un error al subir el fichero [" + path + "]";  
+
+    server.sendHeader("Location","resultadoUpload.html?mensaje=" + mensaje, true);      // Redirect the client to the success page
+    server.send(302);  
     }
   }
 
@@ -1274,93 +1182,4 @@ void handleDatos()
   cad += "</TABLE>\n";
   
   server.send(200, "text/html", cad);
-  }
-
- void handleVersion() 
-  {
-  String cad="";
-
-  cad = cabeceraHTMLlight;
-  cad += "<BR>" + nombre_dispositivo + ". Version " + String(VERSION) + ".";
-
-  cad += pieHTML;
-  
-  server.send(200, "text/HTML", cad);  
-  }
-
-/*********************************************/
-/*                                           */
-/*  Lista los ficheros en el sistema a       */
-/*  traves de una peticion HTTP              */ 
-/*                                           */
-/*********************************************/  
-void handleListaFicheros2(void)
-  {
-  String nombreFichero="";
-  String contenidoFichero="";
-  boolean salvado=false;
-  String cad=cabeceraHTMLlight;
-
-  cad += "<h2>Lista de ficheros</h2>";
-  
-  //Variables para manejar la lista de ficheros
-  String contenido="";
-  String fichero="";  
-  int16_t to=0;
-  
-  if(listaFicheros(contenido)) 
-    {
-    Serial.printf("contenido inicial= %s\n",contenido.c_str());      
-    //busco el primer separador
-    to=contenido.indexOf(SEPARADOR); 
-
-    cad +="<style>";
-    cad +="table{border-collapse: collapse;}";
-    cad += "th, td{border: 1px solid black; padding: 10px; text-align: left;}";
-    cad +="</style>";
-    
-    cad += "<table style=\"border: 0px; border-color: #FFFFFF;\"><tr style=\"border: 0px; border-color: #FFFFFF;\"><td style=\"border: 0px; border-color: #FFFFFF;\">";
-    cad += "<TABLE>";
-    while(to!=-1)
-      {
-      fichero=contenido.substring(0, to);//cojo el principio como el fichero
-      contenido=contenido.substring(to+1); //la cadena ahora es desde el separador al final del fichero anterior
-      to=contenido.indexOf(SEPARADOR); //busco el siguiente separador
-
-      cad += "<TR><TD>" + fichero + "</TD>";           
-      cad += "<TD>";
-      cad += "<form action=\"manageFichero\" target=\"_self\">";
-      cad += "    <input type=\"hidden\" name=\"nombre\" value=\"" + fichero + "\">";
-      cad += "    <input type=\"submit\" value=\"editar\">";
-      cad += "</form>";
-      cad += "</TD><TD>";
-      cad += "<form action=\"borraFichero\" target=\"_self\">";
-      cad += "    <input type=\"hidden\" name=\"nombre\" value=\"" + fichero + "\">";
-      cad += "    <input type=\"submit\" value=\"borrar\">";
-      cad += "</form>";
-      cad += "</TD></TR>";
-      }
-    cad += "</TABLE>\n";
-    cad += "</td>";
-    
-    //Para crear un fichero nuevo
-    cad += "<td style=\"border: 0px; border-color: #FFFFFF;\">";
-    cad += "<h2>Crear un fichero nuevo:</h2>";
-    cad += "<table><tr><td>";      
-    cad += "<form action=\"creaFichero\" target=\"_self\">";
-    cad += "  <p>";
-    cad += "    Nombre:<input type=\"text\" name=\"nombre\" value=\"\">";
-    cad += "    <BR>";
-    cad += "    Contenido:<br><textarea cols=75 rows=20 name=\"contenido\"></textarea>";
-    cad += "    <BR>";
-    cad += "    <input type=\"submit\" value=\"salvar\">";
-    cad += "  </p>";
-    cad += "</td></tr></table>";      
-    cad += "</td>";
-    cad += "</tr></table>";
-    }
-  else cad += "<TR><TD>No se pudo recuperar la lista de ficheros</TD></TR>"; 
-
-  cad += pieHTML;
-  server.send(200, "text/html", cad); 
   }
