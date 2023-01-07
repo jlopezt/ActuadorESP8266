@@ -1095,7 +1095,7 @@ String generaJsonEstadoSalidas(void)
       Salidas_0["id"] = id;
       Salidas_0["nombre"] = salidas[id].nombre;
       Salidas_0["pin"] = salidas[id].pin;
-      Salidas_0["modo"] = salidas[id].modo;
+      Salidas_0["modo"] = getSalidaModoNombre(salidas[id].modo);//salidas[id].modo
       Salidas_0["controlador"] = salidas[id].controlador;
       Salidas_0["estado"] = salidas[id].estado;    
       Salidas_0["nombreEstado"] = salidas[id].nombreEstados[salidas[id].estado];
@@ -1213,3 +1213,30 @@ int8_t setSalidaActiva(int8_t id)
   }  
   
 int8_t getSalidaActiva(void){return salidaActiva;}
+
+/********************************************************/
+/*     Devuelve el nombre del modo de la salida         */
+/********************************************************/ 
+String getSalidaModoNombre(uint8_t modo)
+  {
+  String cad="";
+  switch(modo)
+    {
+    case MODO_MANUAL:
+      cad="Manual";
+      break;
+    case MODO_SECUENCIADOR:
+      cad="Secuenciador";
+      break;
+    case MODO_SEGUIMIENTO:
+      cad="Seguimiento";
+      break;
+    case MODO_MAQUINA:
+      cad="MaquinaEstados";
+      break;    
+    default:
+      cad="Error";
+      break;
+    }
+  return cad;
+  }  

@@ -148,22 +148,23 @@ function actualizaSalidas(datos) {
         estado.innerHTML=salida.nombreEstado;
 
         var accion=document.getElementById("salida_accion_" + indice);
-        if(salida.modo=="Manual"){
+
             if(salida.estado==0) {
                 estado.style.backgroundColor=DESACTIVO;
 
-                accion.innerHTML  = "<form action='activaSalida'><input  type='hidden' id='activa_" + indice + "' name='id' value='" + indice + "'><input STYLE='color: #000000; text-align: center; background-color: #FFFF00; width: 80px' type='submit' value='activar'></form>";
-                accion.innerHTML += "<form action='pulsoSalida'><input  type='hidden' id='pulso_" + indice + "' name='id' value='" + indice + "'><input STYLE='color: #000000; text-align: center; background-color: #FFFF00; width: 80px' type='submit' value='pulso'></form>";
+                accion.innerHTML  = "<form action='activaRele'><input  type='hidden' id='activa_" + indice + "' name='id' value='" + indice + "'><input STYLE='color: #000000; text-align: center; background-color: #FFFF00; width: 80px' type='submit' value='activar'></form>";
+                accion.innerHTML += "<form action='pulsoRele'><input  type='hidden' id='pulso_" + indice + "' name='id' value='" + indice + "'><input STYLE='color: #000000; text-align: center; background-color: #FFFF00; width: 80px' type='submit' value='pulso'></form>";
             }
             else {
                 estado.style.backgroundColor=ACTIVO;
                 
                 //accion.innerHTML  = "<form action='desactivaSalida'><input  type='hidden' id='id' name='id' value='0'><input STYLE='color: #000000; text-align: center; background-color: #DDDDDD; width: 80px' type='submit' value='desactivar'></form>";
-                accion.innerHTML  = "<form action='desactivaSalida'><input  type='hidden' id='desactiva_" + indice + "' name='id' value='" + indice + "'><input STYLE='color: #000000; text-align: center; background-color: #DDDDDD; width: 80px' type='submit' value='desactivar'></form>";
+                accion.innerHTML  = "<form action='desactivaRele'><input  type='hidden' id='desactiva_" + indice + "' name='id' value='" + indice + "'><input STYLE='color: #000000; text-align: center; background-color: #DDDDDD; width: 80px' type='submit' value='desactivar'></form>";
             }
+        if(salida.modo=="Manual"){
         }
         else{
-            accion.innerHTML="<p>Modo " + salida.modo + "</p>";
+            accion.innerHTML += "<p>Modo " + salida.modo + "</p>";
         }
     });
 
